@@ -9,16 +9,11 @@
 
 import argparse
 import sys
-from pathlib import Path
-
-_PROJECT_ROOT = Path(__file__).resolve().parents[3]
-if str(_PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PROJECT_ROOT))
 
 from isaaclab.app import AppLauncher
 
 # local imports
-import scripts.locomotion.rsl_rl.cli_args as cli_args  # isort: skip
+import cli_args  # isort: skip
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Train an RL agent with RSL-RL.")

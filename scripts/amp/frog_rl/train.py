@@ -7,11 +7,6 @@ import os
 import sys
 import time
 from datetime import datetime
-from pathlib import Path
-
-_PROJECT_ROOT = Path(__file__).resolve().parents[3]
-if str(_PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PROJECT_ROOT))
 
 import gymnasium as gym
 import torch
@@ -26,7 +21,7 @@ from isaaclab_tasks.utils.hydra import hydra_task_config
 import frog_lab.tasks  # noqa: F401
 from frog_rl.runners import OnPolicyRunner
 
-import scripts.amp.frog_rl.cli_args as cli_args  # isort: skip
+import cli_args  # isort: skip
 
 logger = logging.getLogger(__name__)
 
