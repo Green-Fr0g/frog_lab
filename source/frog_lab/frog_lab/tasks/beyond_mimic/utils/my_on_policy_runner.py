@@ -6,7 +6,7 @@ from rsl_rl.runners.on_policy_runner import OnPolicyRunner
 from isaaclab_rl.rsl_rl import export_policy_as_onnx
 
 import wandb
-from frog_lab.tasks.beyond_mimic.tracking.utils.exporter import attach_onnx_metadata, export_motion_policy_as_onnx
+from frog_lab.tasks.beyond_mimic.utils.exporter import attach_onnx_metadata, export_motion_policy_as_onnx
 
 
 class MyOnPolicyRunner(OnPolicyRunner):

@@ -1,8 +1,8 @@
 from isaaclab.utils import configclass
 
 from frog_lab.assets.g1_beyond_mimic import G1_ACTION_SCALE, G1_CYLINDER_CFG
-from frog_lab.tasks.beyond_mimic.tracking.config.g1.agents.rsl_rl_ppo_cfg import LOW_FREQ_SCALE
-from frog_lab.tasks.beyond_mimic.tracking.tracking_env_cfg import TrackingEnvCfg
+from frog_lab.tasks.beyond_mimic.config.g1.agents.rsl_rl_ppo_cfg import LOW_FREQ_SCALE
+from frog_lab.tasks.beyond_mimic.tracking_env_cfg import TrackingEnvCfg
 
 
 @configclass
