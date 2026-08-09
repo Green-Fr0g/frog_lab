@@ -5,8 +5,8 @@
 
 """Storage for the learning algorithms."""
 
-from .replay_buffer import ReplayBuffer
+from .replay_buffer import AMPReplayBuffer, ReplayBuffer
 from .rollout_storage import RolloutStorage
 from .wasabi_storage import WasabiStorage
 
-__all__ = ["ReplayBuffer", "RolloutStorage", "WasabiStorage"]
+__all__ = ["AMPReplayBuffer", "ReplayBuffer", "RolloutStorage", "WasabiStorage"]

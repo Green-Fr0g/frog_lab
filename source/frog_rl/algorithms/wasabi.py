@@ -1,12 +1,4 @@
-# Copyright (c) 2026 Ziqi Fan
-# SPDX-License-Identifier: BSD-3-Clause
-
-"""WASABI-style adversarial motion prior extension for PPO.
-
-The environment must expose equally sized ``amp_policy`` and ``amp_reference``
-observations. For G1, both must be produced by the same state specification so
-their fields, joint ordering, units, and default-pose offsets are identical.
-"""
+"""WASABI-style adversarial motion prior extension for PPO."""
 
 from __future__ import annotations
 
@@ -18,11 +10,10 @@ import torch.nn.functional as F
 from tensordict import TensorDict
 
 from frog_rl.algorithms.ppo import PPO
-from frog_rl.algorithms.wasabi_discriminator import WasabiDiscriminator
 from frog_rl.env import VecEnv
 from frog_rl.modules import EmpiricalNormalization
 from frog_rl.storage.wasabi_storage import WasabiStorage
-from frog_rl.utils import resolve_optimizer
+from frog_rl.utils import resolve_callable, resolve_optimizer
 
 
 LossType = Literal["BCEWithLogitsLoss", "MSELoss", "WassersteinLoss"]
@@ -30,12 +21,7 @@ RewardType = Literal["log", "quad", "wasserstein"]
 
 
 class WasabiPPO(PPO):
-    """PPO with a configurable WASABI discriminator trained per rollout.
-
-    ``amp_policy`` is captured before an action is sampled. ``amp_reference``
-    is an independently sampled expert state supplied by the environment at the
-    same rollout step. The discriminator reward is added to the task reward.
-    """
+    """PPO with a configurable state-pair discriminator."""
 
     def __init__(
         self,
@@ -51,33 +37,43 @@ class WasabiPPO(PPO):
         if wasabi_cfg is None:
             raise ValueError("WasabiPPO requires an algorithm.wasabi_cfg configuration.")
 
-        self.wasabi_cfg = wasabi_cfg
-        self.policy_state_key = wasabi_cfg["policy_state_key"]
-        self.reference_state_key = wasabi_cfg["reference_state_key"]
-        self.task_reward_weight = float(wasabi_cfg.get("task_reward_weight", 1.0))
-        self.reward_type: RewardType = wasabi_cfg.get("reward_type", "log")
-        self.reward_coef = float(wasabi_cfg.get("reward_coef", 1.0))
-        self.loss_type: LossType = wasabi_cfg.get("loss_type", "BCEWithLogitsLoss")
-        self.loss_coef = float(wasabi_cfg.get("loss_coef", 1.0))
-        self.gradient_penalty_coef = float(wasabi_cfg.get("gradient_penalty_coef", 10.0))
-        self.gradient_tolerance = float(wasabi_cfg.get("gradient_tolerance", 0.0))
-        self.weight_decay_coef = float(wasabi_cfg.get("weight_decay_coef", 0.0))
-        self.logit_weight_decay_coef = float(wasabi_cfg.get("logit_weight_decay_coef", 0.0))
-
-        self.discriminator = WasabiDiscriminator(
-            state_dim=wasabi_cfg["state_dim"],
-            hidden_dims=wasabi_cfg.get("hidden_dims", (512, 256)),
-            activation=wasabi_cfg.get("activation", "elu"),
-            normalize_input=wasabi_cfg.get("normalize_input", True),
-            normalization_until=wasabi_cfg.get("normalization_until", int(1e8)),
-        ).to(device)
-        optimizer = resolve_optimizer(wasabi_cfg.get("optimizer", "adamw"))
-        self.discriminator_optimizer = optimizer(
-            self.discriminator.parameters(),
-            lr=wasabi_cfg.get("learning_rate", self.learning_rate),
+        self.wasabi_cfg = dict(wasabi_cfg)
+        self.policy_state_key = self.wasabi_cfg.setdefault("policy_state_key", "amp_policy")
+        self.reference_state_key = self.wasabi_cfg.setdefault("reference_state_key", "amp_reference")
+        self.task_reward_weight = float(self.wasabi_cfg.get("task_reward_weight", 1.0))
+        self.reward_type: RewardType = self.wasabi_cfg.get("reward_type", "log")
+        self.reward_coef = float(self.wasabi_cfg.get("reward_coef", 1.0))
+        self.loss_type: LossType = self.wasabi_cfg.get("loss_type", "BCEWithLogitsLoss")
+        self.loss_coef = float(self.wasabi_cfg.get("loss_coef", 1.0))
+        self.gradient_penalty_coef = float(self.wasabi_cfg.get("gradient_penalty_coef", 10.0))
+        self.gradient_tolerance = float(self.wasabi_cfg.get("gradient_tolerance", 0.0))
+        self.weight_decay_coef = float(self.wasabi_cfg.get("weight_decay_coef", 0.0))
+        self.logit_weight_decay_coef = float(self.wasabi_cfg.get("logit_weight_decay_coef", 0.0))
+        self.discriminator_backbone_gradient_only = bool(
+            self.wasabi_cfg.get("discriminator_backbone_gradient_only", False)
         )
+
+        discriminator_class = resolve_callable(self.wasabi_cfg.get("discriminator_class_name", "WasabiDiscriminator"))
+        discriminator_kwargs = dict(self.wasabi_cfg.get("discriminator_kwargs", {}))
+        discriminator_kwargs.pop("state_dim", None)
+        self.discriminator = discriminator_class(
+            state_dim=self.wasabi_cfg["state_dim"],
+            **{
+                "hidden_dims": self.wasabi_cfg.get("hidden_dims", (512, 256)),
+                "activation": self.wasabi_cfg.get("activation", "elu"),
+                "normalize_input": self.wasabi_cfg.get("normalize_input", True),
+                "normalization_until": self.wasabi_cfg.get("normalization_until", int(1e8)),
+                **discriminator_kwargs,
+            },
+        ).to(device)
+
+        optimizer_class = resolve_optimizer(self.wasabi_cfg.get("discriminator_optimizer", "adamw"))
+        discriminator_optimizer_kwargs = dict(self.wasabi_cfg.get("discriminator_optimizer_kwargs", {}))
+        discriminator_optimizer_kwargs.setdefault("lr", self.wasabi_cfg.get("learning_rate", self.learning_rate))
+        self.discriminator_optimizer = optimizer_class(self.discriminator.parameters(), **discriminator_optimizer_kwargs)
+
         self.wasabi_storage = WasabiStorage(
-            storage.num_transitions_per_env, storage.num_envs, wasabi_cfg["state_dim"], device
+            storage.num_transitions_per_env, storage.num_envs, self.wasabi_cfg["state_dim"], device
         )
         self._policy_state: torch.Tensor | None = None
         self._reference_state: torch.Tensor | None = None
@@ -111,36 +107,45 @@ class WasabiPPO(PPO):
         return loss_dict
 
     def train_mode(self) -> None:
+        """Set train mode for the policy and discriminator."""
         super().train_mode()
         self.discriminator.train()
 
     def eval_mode(self) -> None:
+        """Set evaluation mode for the policy and discriminator."""
         super().eval_mode()
         self.discriminator.eval()
 
     def save(self) -> dict:
+        """Return a dict of all models and states for saving."""
         saved_dict = super().save()
         saved_dict["wasabi_discriminator_state_dict"] = self.discriminator.state_dict()
         saved_dict["wasabi_discriminator_optimizer_state_dict"] = self.discriminator_optimizer.state_dict()
         return saved_dict
 
     def load(self, loaded_dict: dict, load_cfg: dict | None, strict: bool) -> bool:
+        """Load the discriminator and optimizer in addition to the policy models."""
         load_iteration = super().load(loaded_dict, load_cfg, strict)
-        if "wasabi_discriminator_state_dict" in loaded_dict:
-            self.discriminator.load_state_dict(loaded_dict["wasabi_discriminator_state_dict"], strict=strict)
-        if "wasabi_discriminator_optimizer_state_dict" in loaded_dict:
-            self.discriminator_optimizer.load_state_dict(loaded_dict["wasabi_discriminator_optimizer_state_dict"])
+        discriminator_state = loaded_dict.get("wasabi_discriminator_state_dict") or loaded_dict.get("discriminator")
+        if discriminator_state is not None:
+            self.discriminator.load_state_dict(discriminator_state, strict=strict)
+        optimizer_state = loaded_dict.get("wasabi_discriminator_optimizer_state_dict") or loaded_dict.get(
+            "discriminator_optimizer"
+        )
+        if optimizer_state is not None:
+            self.discriminator_optimizer.load_state_dict(optimizer_state)
         return load_iteration
 
     def broadcast_parameters(self) -> None:
+        """Broadcast policy and discriminator parameters to all GPUs."""
         super().broadcast_parameters()
         state = [self.discriminator.state_dict()]
-        dist.broadcast_object_list(state, src=0)
+        torch.distributed.broadcast_object_list(state, src=0)
         self.discriminator.load_state_dict(state[0])
 
     @staticmethod
     def construct_algorithm(obs: TensorDict, env: VecEnv, cfg: dict, device: str) -> "WasabiPPO":
-        """Resolve G1/WASABI observation keys before constructing PPO components."""
+        """Resolve WASABI observation keys before constructing PPO components."""
         wasabi_cfg = cfg["algorithm"].get("wasabi_cfg")
         if wasabi_cfg is None:
             raise ValueError("WasabiPPO requires algorithm.wasabi_cfg.")
@@ -152,15 +157,16 @@ class WasabiPPO(PPO):
         reference_key = wasabi_cfg["reference_state_key"]
         missing_keys = [key for key in (policy_key, reference_key) if key not in obs]
         if missing_keys:
-            raise ValueError(f"WASABI observations are missing {missing_keys}; available: {list(obs.keys())}")
+            raise ValueError(f"WasabiPPO observations are missing {missing_keys}; available: {list(obs.keys())}")
 
         policy_dim = obs[policy_key].shape[-1]
         reference_dim = obs[reference_key].shape[-1]
         if policy_dim != reference_dim:
             raise ValueError(
                 f"WASABI policy/reference state dimensions differ: {policy_dim} != {reference_dim}. "
-                "Encode both through the same G1 AMP state specification."
+                "Encode both through the same state specification."
             )
+
         wasabi_cfg["state_dim"] = policy_dim
         cfg["algorithm"]["wasabi_cfg"] = wasabi_cfg
         return PPO.construct_algorithm(obs, env, cfg, device)
@@ -183,8 +189,8 @@ class WasabiPPO(PPO):
             reference_logits = self.discriminator(batch.reference_states)
             discriminator_loss = self._classification_loss(policy_logits, reference_logits)
             gradient_penalty = self._gradient_penalty(batch.policy_states, batch.reference_states)
-            weight_decay = sum((parameter.square().sum() for parameter in self.discriminator.parameters()))
-            logit_weight_decay = self.discriminator.logit.weight.square().sum()
+            weight_decay = sum(parameter.square().sum() for parameter in self.discriminator.parameters())
+            logit_weight_decay = self._logit_weight_decay()
             loss = (
                 self.loss_coef * discriminator_loss
                 + gradient_penalty
@@ -207,6 +213,20 @@ class WasabiPPO(PPO):
 
         loss_dict.update(metrics)
 
+    def _reduce_discriminator_gradients(self) -> None:
+        """Average discriminator gradients across GPUs."""
+        params = [param for param in self.discriminator.parameters() if param.grad is not None]
+        if not params:
+            return
+        flat_grads = torch.cat([param.grad.detach().reshape(-1) for param in params])
+        torch.distributed.all_reduce(flat_grads, op=torch.distributed.ReduceOp.SUM)
+        flat_grads /= self.gpu_world_size
+        offset = 0
+        for param in params:
+            numel = param.numel()
+            param.grad.data.copy_(flat_grads[offset : offset + numel].view_as(param.grad.data))
+            offset += numel
+
     def _classification_loss(self, policy_logits: torch.Tensor, reference_logits: torch.Tensor) -> torch.Tensor:
         if self.loss_type == "BCEWithLogitsLoss":
             policy_loss = F.binary_cross_entropy_with_logits(policy_logits, torch.zeros_like(policy_logits))
@@ -226,21 +246,48 @@ class WasabiPPO(PPO):
             return torch.zeros((), device=self.device)
 
         states = torch.cat([policy_states, reference_states], dim=0).detach().requires_grad_(True)
-        logits = self.discriminator(states)
-        gradients = torch.autograd.grad(
-            outputs=logits,
-            inputs=states,
-            grad_outputs=torch.ones_like(logits),
-            create_graph=True,
-            retain_graph=True,
-        )[0]
+        if (
+            self.discriminator_backbone_gradient_only
+            and getattr(self.discriminator, "encoders", None) is not None
+            and hasattr(self.discriminator, "backbone_run")
+        ):
+            latent = self.discriminator.encoders(states).detach()
+            latent.requires_grad = True
+            logits = self.discriminator.backbone_run(latent)
+            gradients = torch.autograd.grad(
+                outputs=logits,
+                inputs=latent,
+                grad_outputs=torch.ones_like(logits),
+                create_graph=True,
+                retain_graph=True,
+            )[0]
+        else:
+            logits = self.discriminator(states)
+            gradients = torch.autograd.grad(
+                outputs=logits,
+                inputs=states,
+                grad_outputs=torch.ones_like(logits),
+                create_graph=True,
+                retain_graph=True,
+            )[0]
+
         excess_norm = torch.clamp(gradients.norm(2, dim=-1) - self.gradient_tolerance, min=0.0)
         return self.gradient_penalty_coef * excess_norm.square().mean()
 
+    def _logit_weight_decay(self) -> torch.Tensor:
+        if self.logit_weight_decay_coef <= 0.0:
+            return torch.zeros((), device=self.device)
+        if hasattr(self.discriminator, "logit"):
+            return self.discriminator.logit.weight.square().sum()
+        if hasattr(self.discriminator, "amp_linear"):
+            return self.discriminator.amp_linear.weight.square().sum()
+        return torch.zeros((), device=self.device)
+
     def _update_normalizer(self) -> None:
-        normalizer = self.discriminator.normalizer
+        normalizer = getattr(self.discriminator, "normalizer", None)
         if not isinstance(normalizer, EmpiricalNormalization):
             return
+
         policy_states, reference_states = self.wasabi_storage.states()
         states = torch.cat([policy_states, reference_states], dim=0)
         if self.is_multi_gpu and dist.is_initialized():
@@ -253,6 +300,7 @@ class WasabiPPO(PPO):
         """Merge raw moments across ranks before updating the discriminator normalizer."""
         if normalizer.until is not None and normalizer.count >= normalizer.until:
             return
+
         count = torch.tensor(float(states.shape[0]), device=states.device)
         summed = states.sum(dim=0, keepdim=True)
         squared_sum = states.square().sum(dim=0, keepdim=True)
@@ -271,9 +319,3 @@ class WasabiPPO(PPO):
         ) / total_count
         normalizer._std = torch.sqrt(normalizer._var)
         normalizer.count += count.to(dtype=normalizer.count.dtype)
-
-    def _reduce_discriminator_gradients(self) -> None:
-        for parameter in self.discriminator.parameters():
-            if parameter.grad is not None:
-                dist.all_reduce(parameter.grad, op=dist.ReduceOp.SUM)
-                parameter.grad.div_(self.gpu_world_size)

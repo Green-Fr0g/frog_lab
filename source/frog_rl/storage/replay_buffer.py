@@ -1,6 +1,3 @@
-# Copyright (c) 2024-2026 Ziqi Fan
-# SPDX-License-Identifier: BSD-3-Clause
-
 """Replay buffer storing AMP policy transitions."""
 
 from __future__ import annotations
@@ -11,7 +8,7 @@ import numpy as np
 import torch
 
 
-class ReplayBuffer:
+class AMPReplayBuffer:
     """Fixed-size circular buffer to store AMP ``(state, next_state)`` transitions.
 
     Args:
@@ -21,7 +18,7 @@ class ReplayBuffer:
     """
 
     def __init__(self, obs_dim: int, buffer_size: int, device: str) -> None:
-        """Initialize a ReplayBuffer object."""
+        """Initialize an AMPReplayBuffer object."""
         self.states = torch.zeros(buffer_size, obs_dim).to(device)
         self.next_states = torch.zeros(buffer_size, obs_dim).to(device)
         self.buffer_size = buffer_size
@@ -68,3 +65,6 @@ class ReplayBuffer:
                 self.states[sample_idxs].to(self.device),
                 self.next_states[sample_idxs].to(self.device),
             )
+
+
+ReplayBuffer = AMPReplayBuffer

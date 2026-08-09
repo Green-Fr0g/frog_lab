@@ -1,4 +1,3 @@
-# Copyright (c) 2024-2026 Ziqi Fan
 from __future__ import annotations
 
 from collections.abc import Sequence

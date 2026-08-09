@@ -1,7 +1,4 @@
-# Copyright (c) 2026 Ziqi Fan
-# SPDX-License-Identifier: BSD-3-Clause
-
-"""Rollout storage for feed-forward WASABI discriminator updates."""
+"""Rollout storage for WASABI-style state-pair discriminator updates."""
 
 from __future__ import annotations
 
@@ -19,13 +16,7 @@ class WasabiMiniBatch(NamedTuple):
 
 
 class WasabiStorage:
-    """Store one PPO rollout for discriminator training.
-
-    Unlike the legacy AMP replay buffer, this storage keeps episode boundaries.
-    The current discriminator is feed-forward, but retaining ``dones`` makes the
-    data contract usable by a recurrent discriminator without changing the
-    environment interface later.
-    """
+    """Store one PPO rollout for discriminator training."""
 
     def __init__(self, num_steps: int, num_envs: int, state_dim: int, device: str) -> None:
         self.num_steps = num_steps

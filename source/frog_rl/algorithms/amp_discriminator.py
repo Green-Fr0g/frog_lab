@@ -1,6 +1,3 @@
-# Copyright (c) 2024-2026 Ziqi Fan
-# SPDX-License-Identifier: BSD-3-Clause
-
 """Discriminator for AMP (Adversarial Motion Priors).
 
 Ported from the classic NVIDIA AMP implementation (``frog_rl.algorithms.amp_discriminator``)
@@ -54,6 +51,7 @@ class AMPDiscriminator(nn.Module):
         # MLP trunk followed by a single linear head producing the logit
         self.trunk = MLP(input_dim, hidden_layer_sizes[-1], hidden_layer_sizes, activation=activation).to(device)
         self.amp_linear = nn.Linear(hidden_layer_sizes[-1], 1).to(device)
+        self.logit = self.amp_linear
 
         self.trunk.train()
         self.amp_linear.train()
@@ -64,7 +62,9 @@ class AMPDiscriminator(nn.Module):
         d = self.amp_linear(h)
         return d
 
-    def compute_grad_pen(self, expert_state: torch.Tensor, expert_next_state: torch.Tensor, lambda_: float = 10.0):
+    def compute_gradient_penalty(
+        self, expert_state: torch.Tensor, expert_next_state: torch.Tensor, lambda_: float = 10.0
+    ) -> torch.Tensor:
         """Compute the WGAN-GP gradient penalty on the expert transitions.
 
         The penalty enforces that the gradient of the discriminator output w.r.t. the
@@ -96,11 +96,16 @@ class AMPDiscriminator(nn.Module):
         grad_pen = lambda_ * (grad.norm(2, dim=1) - 0).pow(2).mean()
         return grad_pen
 
-    def predict_amp_reward(
+    def compute_grad_pen(self, expert_state: torch.Tensor, expert_next_state: torch.Tensor, lambda_: float = 10.0):
+        """Backward-compatible alias for :meth:`compute_gradient_penalty`."""
+        return self.compute_gradient_penalty(expert_state, expert_next_state, lambda_)
+
+    @torch.no_grad()
+    def reward(
         self,
         state: torch.Tensor,
         next_state: torch.Tensor,
-        task_reward: torch.Tensor,
+        task_reward: torch.Tensor | None = None,
         normalizer: EmpiricalNormalization | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Compute the AMP reward from the discriminator logit.
@@ -108,25 +113,36 @@ class AMPDiscriminator(nn.Module):
         Args:
             state: Policy states of shape ``(N, state_dim)``.
             next_state: Policy next states of shape ``(N, state_dim)``.
-            task_reward: Task reward of shape ``(N,)`` or ``(N, 1)`` (used only when
-                ``task_reward_lerp > 0``).
+            task_reward: Optional task reward of shape ``(N,)`` or ``(N, 1)``.
             normalizer: Optional normalizer applied to the states before the forward pass.
 
         Returns:
             A tuple of the AMP reward of shape ``(N,)`` and the discriminator logit.
         """
-        with torch.no_grad():
-            self.eval()
-            if normalizer is not None:
-                state = normalizer(state)
-                next_state = normalizer(next_state)
+        was_training = self.training
+        self.eval()
+        if normalizer is not None:
+            state = normalizer(state)
+            next_state = normalizer(next_state)
 
-            d = self.amp_linear(self.trunk(torch.cat([state, next_state], dim=-1)))
-            reward = self.amp_reward_coef * torch.clamp(1 - (1 / 4) * torch.square(d - 1), min=0)
-            if self.task_reward_lerp > 0:
-                reward = self._lerp_reward(reward, task_reward)
-            self.train()
-        return reward.squeeze(), d
+        logits = self.forward(torch.cat([state, next_state], dim=-1))
+        reward = self.amp_reward_coef * torch.clamp(1 - (1 / 4) * torch.square(logits - 1), min=0)
+        if self.task_reward_lerp > 0:
+            if task_reward is None:
+                raise ValueError("task_reward must be provided when task_reward_lerp > 0.")
+            reward = self._lerp_reward(reward, task_reward)
+        self.train(was_training)
+        return reward.squeeze(-1), logits.squeeze(-1)
+
+    def predict_amp_reward(
+        self,
+        state: torch.Tensor,
+        next_state: torch.Tensor,
+        task_reward: torch.Tensor,
+        normalizer: EmpiricalNormalization | None = None,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Backward-compatible alias for :meth:`reward`."""
+        return self.reward(state, next_state, task_reward=task_reward, normalizer=normalizer)
 
     def _lerp_reward(self, disc_r: torch.Tensor, task_r: torch.Tensor) -> torch.Tensor:
         """Mix the AMP reward with the task reward."""

@@ -1,6 +1,3 @@
-# Copyright (c) 2026 Ziqi Fan
-# SPDX-License-Identifier: BSD-3-Clause
-
 """Configurable feed-forward discriminator used by WASABI."""
 
 from __future__ import annotations
