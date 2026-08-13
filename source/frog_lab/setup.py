@@ -20,7 +20,6 @@ INSTALL_REQUIRES = [
     # NOTE: Add dependencies
     "psutil",
     "onnxscript",
-    "wandb>=0.19",
 ]
 
 # Installation operation

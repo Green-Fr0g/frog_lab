@@ -1,12 +1,11 @@
 """Configuration for the Unitree G1 23-DOF humanoid."""
 
-from pathlib import Path
-
 import isaaclab.sim as sim_utils
 from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets import ArticulationCfg
+from frog_lab.assets import FROG_LAB_DATA_DIR
 
-G1_23DOF_URDF_PATH = Path(__file__).resolve().parents[3] / "model" / "g1" / "urdf" / "g1_23dof_rev_1_0.urdf"
+G1_23DOF_URDF_PATH = f"{FROG_LAB_DATA_DIR}/g1/urdf/g1_23dof_rev_1_0.urdf"
 
 
 G1_23DOF_CFG = ArticulationCfg(

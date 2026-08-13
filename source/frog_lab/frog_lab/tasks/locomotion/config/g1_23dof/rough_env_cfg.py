@@ -72,13 +72,13 @@ class G1_23DOFRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         #state_Rewards
         self.rewards.lin_vel_z_l2.weight = 0.0
         self.rewards.ang_vel_xy_l2.weight = -0.1
-        self.rewards.flat_orientation_l2.weight = -0.2
-        self.rewards.base_height_l2.weight = 0.0
+        self.rewards.flat_orientation_l2.weight = -1.0
+        self.rewards.base_height_l2.weight = -10.0
         self.rewards.base_height_l2.params["target_height"] = 0.78
         self.rewards.base_height_l2.params["asset_cfg"].body_names = [self.base_link_name]
         self.rewards.body_lin_acc_l2.weight = 0.0
         self.rewards.body_lin_acc_l2.params["asset_cfg"].body_names = [self.base_link_name]
-        self.rewards.stand_still.weight = -0.8
+        self.rewards.stand_still.weight = 0.0
 
         #joints_Rewards
         self.rewards.joint_pos_limits.weight = -0.5
@@ -124,7 +124,7 @@ class G1_23DOFRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.rewards.upward.weight = 1.0
 
         #other_Rewards
-        self.rewards.undesired_contacts.weight = 0.0
+        self.rewards.undesired_contacts.weight = -1.0
         self.rewards.undesired_contacts.params["sensor_cfg"].body_names = [f"^(?!.*{self.foot_link_name}).*"]
         self.rewards.contact_forces.weight = 0.0
         self.rewards.contact_forces.params["sensor_cfg"].body_names = [self.foot_link_name]
