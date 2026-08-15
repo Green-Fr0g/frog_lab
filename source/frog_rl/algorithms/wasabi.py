@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Literal
 
 import torch
@@ -18,6 +19,32 @@ from frog_rl.utils import resolve_callable, resolve_optimizer
 
 LossType = Literal["BCEWithLogitsLoss", "MSELoss", "WassersteinLoss"]
 RewardType = Literal["log", "quad", "wasserstein"]
+_WASABI_TERM_ORDER = ("projected_gravity", "joint_pos_rel", "joint_vel", "base_lin_vel", "base_ang_vel")
+
+
+def _flatten_wasabi_state(state, state_key: str) -> torch.Tensor:
+    """Flatten an InstinctLab-style non-concatenated state group."""
+    if isinstance(state, torch.Tensor):
+        if state.ndim != 2:
+            raise ValueError(f"WASABI state '{state_key}' must be 2-D, got {tuple(state.shape)}.")
+        return state
+    if isinstance(state, Mapping) or (hasattr(state, "keys") and hasattr(state, "__getitem__")):
+        missing = [term for term in _WASABI_TERM_ORDER if term not in state]
+        if missing:
+            raise ValueError(f"WASABI state '{state_key}' is missing terms: {missing}.")
+        values = []
+        for term in _WASABI_TERM_ORDER:
+            value = state[term]
+            if not isinstance(value, torch.Tensor) or value.ndim != 2:
+                shape = getattr(value, "shape", None)
+                raise ValueError(f"WASABI term '{state_key}.{term}' must be a 2-D Tensor, got {shape}.")
+            values.append(value)
+        return torch.cat(values, dim=-1)
+    raise TypeError(f"WASABI state '{state_key}' must be a Tensor or mapping, got {type(state).__name__}.")
+
+
+def _wasabi_state_dim(state, state_key: str) -> int:
+    return _flatten_wasabi_state(state, state_key).shape[-1]
 
 
 class WasabiPPO(PPO):
@@ -38,8 +65,8 @@ class WasabiPPO(PPO):
             raise ValueError("WasabiPPO requires an algorithm.wasabi_cfg configuration.")
 
         self.wasabi_cfg = dict(wasabi_cfg)
-        self.policy_state_key = self.wasabi_cfg.setdefault("policy_state_key", "amp_policy")
-        self.reference_state_key = self.wasabi_cfg.setdefault("reference_state_key", "amp_reference")
+        self.policy_state_key = self.wasabi_cfg.setdefault("policy_state_key", "wasabi_policy")
+        self.reference_state_key = self.wasabi_cfg.setdefault("reference_state_key", "wasabi_reference")
         self.task_reward_weight = float(self.wasabi_cfg.get("task_reward_weight", 1.0))
         self.reward_type: RewardType = self.wasabi_cfg.get("reward_type", "log")
         self.reward_coef = float(self.wasabi_cfg.get("reward_coef", 1.0))
@@ -80,8 +107,8 @@ class WasabiPPO(PPO):
 
     def act(self, obs: TensorDict) -> torch.Tensor:
         """Capture discriminator inputs from the pre-action observation."""
-        self._policy_state = obs[self.policy_state_key]
-        self._reference_state = obs[self.reference_state_key]
+        self._policy_state = _flatten_wasabi_state(obs[self.policy_state_key], self.policy_state_key)
+        self._reference_state = _flatten_wasabi_state(obs[self.reference_state_key], self.reference_state_key)
         return super().act(obs)
 
     def process_env_step(
@@ -151,16 +178,16 @@ class WasabiPPO(PPO):
             raise ValueError("WasabiPPO requires algorithm.wasabi_cfg.")
 
         wasabi_cfg = dict(wasabi_cfg)
-        wasabi_cfg.setdefault("policy_state_key", "amp_policy")
-        wasabi_cfg.setdefault("reference_state_key", "amp_reference")
+        wasabi_cfg.setdefault("policy_state_key", "wasabi_policy")
+        wasabi_cfg.setdefault("reference_state_key", "wasabi_reference")
         policy_key = wasabi_cfg["policy_state_key"]
         reference_key = wasabi_cfg["reference_state_key"]
         missing_keys = [key for key in (policy_key, reference_key) if key not in obs]
         if missing_keys:
             raise ValueError(f"WasabiPPO observations are missing {missing_keys}; available: {list(obs.keys())}")
 
-        policy_dim = obs[policy_key].shape[-1]
-        reference_dim = obs[reference_key].shape[-1]
+        policy_dim = _wasabi_state_dim(obs[policy_key], policy_key)
+        reference_dim = _wasabi_state_dim(obs[reference_key], reference_key)
         if policy_dim != reference_dim:
             raise ValueError(
                 f"WASABI policy/reference state dimensions differ: {policy_dim} != {reference_dim}. "

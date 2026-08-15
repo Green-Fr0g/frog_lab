@@ -92,7 +92,6 @@ class G1_23DOFRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         ]
         self.rewards.joint_vel_l2.weight = 0.0
         self.rewards.joint_acc_l2.weight = -1.25e-7
-        self.rewards.joint_acc_l2.params["asset_cfg"].joint_names = [".*_hip_.*", ".*_knee_joint"]
         self.rewards.joint_deviation_arms.weight = -0.1
         self.rewards.joint_deviation_arms.params["asset_cfg"].joint_names = [
             ".*_shoulder_pitch_joint",

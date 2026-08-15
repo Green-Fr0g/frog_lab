@@ -9,7 +9,7 @@ from tensordict import TensorDict
 from frog_rl.algorithms.amp_discriminator import AMPDiscriminator
 from frog_rl.algorithms.ppo import PPO
 from frog_rl.modules.normalization import EmpiricalNormalization
-from frog_rl.storage import AMPReplayBuffer
+from frog_rl.storage import AMPStorage
 from frog_rl.utils import resolve_callable, resolve_optimizer
 
 
@@ -61,7 +61,7 @@ class AMPPPO(PPO):
             activation=amp_cfg.get("amp_discr_activation", "relu"),
             task_reward_lerp=amp_cfg.get("amp_task_reward_lerp", 0.0),
         )
-        self.amp_storage = AMPReplayBuffer(self.state_dim, amp_cfg.get("amp_replay_buffer_size", 1000000), device)
+        self.amp_storage = AMPStorage(self.state_dim, amp_cfg.get("amp_replay_buffer_size", 1000000), device)
         self.amp_normalizer = EmpiricalNormalization(shape=self.state_dim, until=int(1.0e8)).to(device)
         motion_loader_class = resolve_callable(
             amp_cfg.get(
@@ -171,6 +171,32 @@ class AMPPPO(PPO):
     @staticmethod
     def construct_algorithm(obs: TensorDict, env, cfg: dict, device: str) -> "AMPPPO":
         """Construct the AMP-PPO algorithm."""
+        if "policy" in cfg:
+            policy_cfg = dict(cfg.pop("policy"))
+            distribution_class = (
+                "frog_rl.modules.distribution:HeteroscedasticGaussianDistribution"
+                if policy_cfg.get("state_dependent_std", False)
+                else "frog_rl.modules.distribution:GaussianDistribution"
+            )
+
+            cfg["actor"] = {
+                "class_name": "frog_rl.models.mlp_model:MLPModel",
+                "hidden_dims": policy_cfg["actor_hidden_dims"],
+                "activation": policy_cfg["activation"],
+                "obs_normalization": policy_cfg["actor_obs_normalization"],
+                "distribution_cfg": {
+                    "class_name": distribution_class,
+                    "init_std": policy_cfg["init_noise_std"],
+                    "std_type": policy_cfg.get("noise_std_type", "scalar"),
+                },
+            }
+            cfg["critic"] = {
+                "class_name": "frog_rl.models.mlp_model:MLPModel",
+                "hidden_dims": policy_cfg["critic_hidden_dims"],
+                "activation": policy_cfg["activation"],
+                "obs_normalization": policy_cfg["critic_obs_normalization"],
+            }
+
         if cfg["algorithm"].get("amp_cfg") is not None and "amp_state" not in cfg["obs_groups"]:
             cfg["obs_groups"]["amp_state"] = ["amp_state"]
         cfg["algorithm"] = resolve_amp_config(cfg["algorithm"], obs, env)

@@ -8,7 +8,7 @@ import numpy as np
 import torch
 
 
-class AMPReplayBuffer:
+class AMPStorage:
     """Fixed-size circular buffer to store AMP ``(state, next_state)`` transitions.
 
     Args:
@@ -18,7 +18,7 @@ class AMPReplayBuffer:
     """
 
     def __init__(self, obs_dim: int, buffer_size: int, device: str) -> None:
-        """Initialize an AMPReplayBuffer object."""
+        """Initialize an AMPStorage object."""
         self.states = torch.zeros(buffer_size, obs_dim).to(device)
         self.next_states = torch.zeros(buffer_size, obs_dim).to(device)
         self.buffer_size = buffer_size
@@ -66,5 +66,3 @@ class AMPReplayBuffer:
                 self.next_states[sample_idxs].to(self.device),
             )
 
-
-ReplayBuffer = AMPReplayBuffer

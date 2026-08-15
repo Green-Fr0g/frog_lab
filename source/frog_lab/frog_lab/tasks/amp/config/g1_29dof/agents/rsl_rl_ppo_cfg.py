@@ -1,0 +1,72 @@
+from __future__ import annotations
+
+from dataclasses import MISSING
+
+from isaaclab.utils import configclass
+from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, RslRlPpoAlgorithmCfg
+
+from frog_lab.tasks.amp.config.g1_29dof.flat_env_cfg import G1_29DOFAmpFlatEnvCfg
+
+
+@configclass
+class G1_29DOFAmpAlgorithmCfg(RslRlPpoAlgorithmCfg):
+    class_name: str = "AMPPPO"
+    amp_cfg: dict = MISSING
+
+
+@configclass
+class G1_29DOFAmpFlatRunnerCfg(RslRlOnPolicyRunnerCfg):
+    class_name: str = "OnPolicyRunner"
+    num_steps_per_env = 24
+    max_iterations = 5000
+    save_interval = 50
+    experiment_name = "g1_29dof_amp_flat"
+
+    policy: RslRlPpoActorCriticCfg = RslRlPpoActorCriticCfg(
+        init_noise_std=1.0,
+        actor_obs_normalization=False,
+        critic_obs_normalization=False,
+        actor_hidden_dims=[512, 256, 128],
+        critic_hidden_dims=[512, 256, 128],
+        activation="elu",
+    )
+    
+    algorithm: G1_29DOFAmpAlgorithmCfg = G1_29DOFAmpAlgorithmCfg(
+        value_loss_coef=1.0,
+        use_clipped_value_loss=True,
+        clip_param=0.2,
+        entropy_coef=0.008,
+        num_learning_epochs=5,
+        num_mini_batches=4,
+        learning_rate=1.0e-3,
+        schedule="adaptive",
+        gamma=0.99,
+        lam=0.95,
+        desired_kl=0.01,
+        max_grad_norm=1.0,
+        amp_cfg={
+            "amp_reward_coef": 0.1,
+            "amp_replay_buffer_size": 2000000,
+            "amp_discr_hidden_dims": [1024, 512,256],
+            "discriminator_lr": 1.0e-3,
+            "amp_trunk_weight_decay": 1.0e-3,
+            "amp_head_weight_decay": 1.0e-2,
+            "grad_pen_coef": 10.0,
+            "min_normalized_std": [0.05] * 29,
+            "amp_task_reward_lerp": 0.75,
+            "motion_loader_class_name": "frog_lab.tasks.amp.utils.motion_loader:G1AMPBodyStateMotionLoader",
+            "motion_loader_kwargs": {
+                "motion_files": G1_29DOFAmpFlatEnvCfg().motion_dir,
+                "body_names": tuple(G1_29DOFAmpFlatEnvCfg().amp_body_names),
+                "anchor_name": G1_29DOFAmpFlatEnvCfg().anchor_body_name,
+                "all_body_names": tuple(G1_29DOFAmpFlatEnvCfg().amp_all_body_names),
+                "quat_order": "wxyz",
+            },
+        },
+    )
+
+    obs_groups = {
+        "actor": ["policy"],
+        "critic": ["critic"],
+        "amp_state": ["amp_state"],
+    }
