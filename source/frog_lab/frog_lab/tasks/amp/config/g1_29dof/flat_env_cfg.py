@@ -115,7 +115,11 @@ class G1_29DOFAmpFlatEnvCfg(AmpFlatEnvCfg):
         self.commands.base_velocity.ranges.heading = (-1.57, 1.57)
 
         self.events.init_motion_loader.params["motion_dir"] = self.motion_dir
+        self.events.init_motion_loader.params["root_name"] = self.root_link_name
+        self.events.init_motion_loader.params["all_body_names"] = tuple(self.amp_all_body_names)
         self.events.reset_from_motion.params["motion_dir"] = self.motion_dir
+        self.events.reset_from_motion.params["root_name"] = self.root_link_name
+        self.events.reset_from_motion.params["all_body_names"] = tuple(self.amp_all_body_names)
         self.events.reset_from_motion.params["asset_cfg"].joint_names = self.joint_names
         self.events.randomize_com_positions.params["asset_cfg"].body_names = [self.base_link_name]
 

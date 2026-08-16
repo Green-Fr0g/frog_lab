@@ -20,13 +20,23 @@ def resolve_amp_config(alg_cfg: dict, obs, env) -> dict:
         alg_cfg["amp_cfg"] = None
         return alg_cfg
 
-    if "amp_state" not in obs:
+    amp_cfg = dict(amp_cfg)
+    state_key = amp_cfg.get("expert_state_key", "amp_state")
+    if not isinstance(state_key, str) or not state_key:
+        raise ValueError("AMPPPO requires a non-empty amp_cfg.expert_state_key.")
+    if state_key not in obs:
         raise ValueError(
-            "AMPPPO requires an 'amp_state' observation group, "
+            f"AMPPPO requires the '{state_key}' observation group, "
             f"but it is not present. Available observations: {list(obs.keys())}"
         )
-    amp_cfg = dict(amp_cfg)
-    amp_cfg["state_dim"] = obs["amp_state"].shape[-1]
+    state = obs[state_key]
+    if not isinstance(state, torch.Tensor) or state.ndim != 2:
+        raise ValueError(
+            f"AMPPPO observation '{state_key}' must be a 2-D Tensor, "
+            f"got {type(state).__name__} with shape {getattr(state, 'shape', None)}."
+        )
+    amp_cfg["expert_state_key"] = state_key
+    amp_cfg["state_dim"] = state.shape[-1]
     amp_cfg["discriminator_input_dim"] = 2 * amp_cfg["state_dim"]
     amp_cfg.setdefault("time_between_frames", env.unwrapped.step_dt)
     alg_cfg["amp_cfg"] = amp_cfg
@@ -52,6 +62,7 @@ class AMPPPO(PPO):
             raise ValueError("The AMP configuration 'amp_cfg' is required for AMPPPO.")
 
         self.amp_cfg = amp_cfg
+        self.expert_state_key = amp_cfg.get("expert_state_key", "amp_state")
         self.state_dim = amp_cfg["state_dim"]
         self.discriminator = AMPDiscriminator(
             input_dim=amp_cfg["discriminator_input_dim"],
@@ -63,12 +74,10 @@ class AMPPPO(PPO):
         )
         self.amp_storage = AMPStorage(self.state_dim, amp_cfg.get("amp_replay_buffer_size", 1000000), device)
         self.amp_normalizer = EmpiricalNormalization(shape=self.state_dim, until=int(1.0e8)).to(device)
-        motion_loader_class = resolve_callable(
-            amp_cfg.get(
-                "motion_loader_class_name",
-                "frog_lab.tasks.amp.utils.motion_loader:G1AMPBodyStateMotionLoader",
-            )
-        )
+        motion_loader_class_name = amp_cfg.get("motion_loader_class_name")
+        if not motion_loader_class_name:
+            raise ValueError("AMPPPO requires amp_cfg.motion_loader_class_name.")
+        motion_loader_class = resolve_callable(motion_loader_class_name)
         motion_loader_kwargs = dict(amp_cfg.get("motion_loader_kwargs", {}))
         if "motion_files" not in motion_loader_kwargs and "amp_motion_files" in amp_cfg:
             motion_loader_kwargs["motion_files"] = amp_cfg["amp_motion_files"]
@@ -77,6 +86,12 @@ class AMPPPO(PPO):
             time_between_frames=amp_cfg.get("time_between_frames", 0.02),
             **motion_loader_kwargs,
         )
+        expert_state_dim = getattr(self.amp_data, "state_dim", None)
+        if expert_state_dim is not None and expert_state_dim != self.state_dim:
+            raise ValueError(
+                f"AMP expert state dimension mismatch: observation '{self.expert_state_key}' has "
+                f"dimension {self.state_dim}, motion loader has {expert_state_dim}."
+            )
 
         disc_opt_class = resolve_optimizer(amp_cfg.get("discriminator_optimizer", "adam"))
         self.discriminator_optimizer = disc_opt_class(
@@ -98,7 +113,7 @@ class AMPPPO(PPO):
 
     def act(self, obs: TensorDict) -> torch.Tensor:
         """Cache the current AMP state before sampling actions."""
-        self._current_amp_state = obs["amp_state"]
+        self._current_amp_state = obs[self.expert_state_key]
         return super().act(obs)
 
     def process_env_step(
@@ -108,11 +123,12 @@ class AMPPPO(PPO):
         if self._current_amp_state is None:
             raise RuntimeError("AMPPPO.process_env_step() must be called after act().")
 
-        next_amp_state = obs["amp_state"]
-        if "terminal_amp_states" in extras:
+        next_amp_state = obs[self.expert_state_key]
+        terminal_key = f"terminal_{self.expert_state_key}s"
+        if terminal_key in extras:
             reset_env_ids = (dones > 0).flatten().nonzero(as_tuple=False).flatten()
             next_amp_state = next_amp_state.clone()
-            next_amp_state[reset_env_ids] = extras["terminal_amp_states"][reset_env_ids]
+            next_amp_state[reset_env_ids] = extras[terminal_key][reset_env_ids]
 
         self.amp_storage.insert(self._current_amp_state, next_amp_state)
         amp_reward, _ = self.discriminator.reward(self._current_amp_state, next_amp_state, rewards, self.amp_normalizer)
@@ -197,8 +213,11 @@ class AMPPPO(PPO):
                 "obs_normalization": policy_cfg["critic_obs_normalization"],
             }
 
-        if cfg["algorithm"].get("amp_cfg") is not None and "amp_state" not in cfg["obs_groups"]:
-            cfg["obs_groups"]["amp_state"] = ["amp_state"]
+        amp_cfg = cfg["algorithm"].get("amp_cfg")
+        if amp_cfg is not None:
+            state_key = amp_cfg.get("expert_state_key", "amp_state")
+            if state_key not in cfg["obs_groups"]:
+                cfg["obs_groups"][state_key] = [state_key]
         cfg["algorithm"] = resolve_amp_config(cfg["algorithm"], obs, env)
         return PPO.construct_algorithm(obs, env, cfg, device)
 

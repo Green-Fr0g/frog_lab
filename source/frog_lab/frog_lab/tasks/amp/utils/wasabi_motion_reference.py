@@ -41,6 +41,7 @@ class WasabiMotionReference:
         motion_files: str | Sequence[str],
         body_names: Sequence[str],
         anchor_name: str,
+        root_name: str,
         all_body_names: Sequence[str],
         joint_names: Sequence[str],
         device: str | torch.device = "cpu",
@@ -49,6 +50,7 @@ class WasabiMotionReference:
         self.device = torch.device(device)
         self.body_names = tuple(body_names)
         self.anchor_name = anchor_name
+        self.root_name = root_name
         self.all_body_names = tuple(all_body_names)
         self.joint_names = tuple(joint_names)
         self.time_between_frames = float(time_between_frames)
@@ -57,12 +59,7 @@ class WasabiMotionReference:
         self.motion_files = self._collect_motion_files(motion_files)
         self._body_indices = tuple(self.all_body_names.index(name) for name in self.body_names)
         self._anchor_index = self.all_body_names.index(self.anchor_name)
-        if self.all_body_names[0] != "pelvis":
-            raise ValueError(
-                "WASABI all_body_names must start with the robot root body 'pelvis' so root reset and "
-                "reference proprioception use the same motion convention."
-            )
-        self._root_index = 0
+        self._root_index = self.all_body_names.index(self.root_name)
         self._clips = [self._load_clip(path) for path in self.motion_files]
         if not self._clips:
             raise FileNotFoundError(f"No WASABI motion files found in: {motion_files}")
@@ -85,6 +82,7 @@ class WasabiMotionReference:
         motion_files: str | Sequence[str],
         body_names: Sequence[str],
         anchor_name: str,
+        root_name: str,
         all_body_names: Sequence[str],
         joint_names: Sequence[str],
         time_between_frames: float = 0.02,
@@ -93,6 +91,7 @@ class WasabiMotionReference:
             motion_files=motion_files,
             body_names=body_names,
             anchor_name=anchor_name,
+            root_name=root_name,
             all_body_names=all_body_names,
             joint_names=joint_names,
             device=env.device,
@@ -114,6 +113,8 @@ class WasabiMotionReference:
             raise ValueError(f"WASABI body_names are missing from all_body_names: {missing}")
         if self.anchor_name not in self.all_body_names:
             raise ValueError(f"WASABI anchor body '{self.anchor_name}' is not in all_body_names.")
+        if self.root_name not in self.all_body_names:
+            raise ValueError(f"WASABI root body '{self.root_name}' is not in all_body_names.")
         if len(set(self.joint_names)) != len(self.joint_names):
             raise ValueError("WASABI joint_names contains duplicate names.")
 

@@ -134,7 +134,10 @@ class ObservationsCfg:
         projected_gravity = ObsTerm(
             func=mdp.projected_gravity,
         )
-        velocity_commands = ObsTerm(func=mdp.generated_commands, params={"command_name": "base_velocity"})
+        velocity_commands = ObsTerm(
+            func=mdp.generated_commands,
+            params={"command_name": "base_velocity"}
+        )
         joint_pos = ObsTerm(
             func=mdp.joint_pos_rel,
             params={"asset_cfg": SceneEntityCfg("robot", joint_names=".*", preserve_order=True)},
@@ -144,7 +147,9 @@ class ObservationsCfg:
             params={"asset_cfg": SceneEntityCfg("robot", joint_names=".*", preserve_order=True)},
             scale=0.05,
         )
-        actions = ObsTerm(func=mdp.last_action)
+        actions = ObsTerm(
+            func=mdp.last_action
+        )
 
         def __post_init__(self):
             self.enable_corruption = False
@@ -154,7 +159,6 @@ class ObservationsCfg:
     # ============================== WASABI OBSERVATIONS ==============================
     @configclass
     class WasabiPolicyCfg(ObsGroup):
-        concatenate_terms = False
         projected_gravity = ObsTerm(
             func=mdp.projected_gravity_wasabi_policy,
             params={"asset_cfg": SceneEntityCfg("robot")},
@@ -188,10 +192,10 @@ class ObservationsCfg:
 
         def __post_init__(self):
             self.enable_corruption = False
+            self.concatenate_terms = False
 
     @configclass
     class WasabiReferenceCfg(ObsGroup):
-        concatenate_terms = False
         projected_gravity = ObsTerm(
             func=mdp.projected_gravity_reference_as_state,
             params={"asset_cfg": SceneEntityCfg("robot")},
@@ -231,6 +235,7 @@ class ObservationsCfg:
 
         def __post_init__(self):
             self.enable_corruption = False
+            self.concatenate_terms = False
 
     policy: PolicyCfg = PolicyCfg()
     critic: CriticCfg = CriticCfg()
@@ -248,6 +253,7 @@ class EventCfg:
             "motion_files": "",
             "body_names": (),
             "anchor_name": "",
+            "root_name": "",
             "all_body_names": (),
             "joint_names": (),
             "time_between_frames": 0.02,

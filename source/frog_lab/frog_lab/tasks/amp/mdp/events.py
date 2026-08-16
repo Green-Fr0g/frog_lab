@@ -26,9 +26,19 @@ class MotionResetManager:
             cls._instance = cls()
         return cls._instance
 
-    def init(self, motion_dir: str, device: str | torch.device) -> None:
+    def init(
+        self,
+        motion_dir: str,
+        device: str | torch.device,
+        root_name: str,
+        all_body_names: tuple[str, ...],
+    ) -> None:
         motion_dir = str(Path(motion_dir).expanduser().resolve())
-        if motion_dir in self._frames:
+        if root_name not in all_body_names:
+            raise ValueError(f"AMP root body '{root_name}' is not in all_body_names.")
+        root_index = all_body_names.index(root_name)
+        cache_key = f"{motion_dir}:{root_index}:{tuple(all_body_names)}"
+        if cache_key in self._frames:
             return
 
         files = self._collect_motion_files(motion_dir)
@@ -49,38 +59,49 @@ class MotionResetManager:
                 if key not in data:
                     raise KeyError(f"AMP motion file '{file}' is missing key '{key}'.")
 
-            frame_lists["root_pos"].append(torch.as_tensor(data["body_pos_w"][:, 0, :], device=device, dtype=torch.float32))
+            body_pos_w = data["body_pos_w"]
+            if body_pos_w.shape[1] != len(all_body_names):
+                raise ValueError(
+                    f"AMP motion file '{file}' has {body_pos_w.shape[1]} bodies; "
+                    f"expected {len(all_body_names)}."
+                )
+            frame_lists["root_pos"].append(
+                torch.as_tensor(body_pos_w[:, root_index, :], device=device, dtype=torch.float32)
+            )
             frame_lists["root_quat"].append(
-                torch.as_tensor(data["body_quat_w"][:, 0, :], device=device, dtype=torch.float32)
+                torch.as_tensor(data["body_quat_w"][:, root_index, :], device=device, dtype=torch.float32)
             )
             frame_lists["root_lin_vel"].append(
-                torch.as_tensor(data["body_lin_vel_w"][:, 0, :], device=device, dtype=torch.float32)
+                torch.as_tensor(data["body_lin_vel_w"][:, root_index, :], device=device, dtype=torch.float32)
             )
             frame_lists["root_ang_vel"].append(
-                torch.as_tensor(data["body_ang_vel_w"][:, 0, :], device=device, dtype=torch.float32)
+                torch.as_tensor(data["body_ang_vel_w"][:, root_index, :], device=device, dtype=torch.float32)
             )
             frame_lists["joint_pos"].append(torch.as_tensor(data["joint_pos"], device=device, dtype=torch.float32))
             frame_lists["joint_vel"].append(torch.as_tensor(data["joint_vel"], device=device, dtype=torch.float32))
 
-        self._frames[motion_dir] = {key: torch.cat(value, dim=0) for key, value in frame_lists.items()}
+        self._frames[cache_key] = {key: torch.cat(value, dim=0) for key, value in frame_lists.items()}
 
     def reset(
         self,
         env: ManagerBasedRLEnv,
         env_ids: torch.Tensor | None,
         motion_dir: str,
+        root_name: str,
+        all_body_names: tuple[str, ...],
         asset_cfg: SceneEntityCfg,
     ) -> None:
         motion_dir = str(Path(motion_dir).expanduser().resolve())
-        if motion_dir not in self._frames:
-            self.init(motion_dir, env.device)
+        cache_key = f"{motion_dir}:{all_body_names.index(root_name)}:{tuple(all_body_names)}"
+        if cache_key not in self._frames:
+            self.init(motion_dir, env.device, root_name, all_body_names)
 
         if env_ids is None:
             env_ids = torch.arange(env.num_envs, device=env.device, dtype=torch.long)
         if len(env_ids) == 0:
             return
 
-        frames = self._frames[motion_dir]
+        frames = self._frames[cache_key]
         frame_ids = torch.randint(0, frames["root_pos"].shape[0], (len(env_ids),), device=env.device)
         asset: Articulation = env.scene[asset_cfg.name]
 
@@ -111,17 +132,21 @@ def init_motion_loader(
     env: ManagerBasedRLEnv,
     env_ids: torch.Tensor | None,
     motion_dir: str,
+    root_name: str,
+    all_body_names: tuple[str, ...],
 ) -> None:
     """Load AMP motion data during startup."""
     del env_ids
-    MotionResetManager.get().init(motion_dir, env.device)
+    MotionResetManager.get().init(motion_dir, env.device, root_name, all_body_names)
 
 
 def reset_from_motion_data(
     env: ManagerBasedRLEnv,
     env_ids: torch.Tensor | None,
     motion_dir: str,
+    root_name: str,
+    all_body_names: tuple[str, ...],
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot", joint_names=".*"),
 ) -> None:
     """Reset selected environments from random AMP motion frames."""
-    MotionResetManager.get().reset(env, env_ids, motion_dir, asset_cfg)
+    MotionResetManager.get().reset(env, env_ids, motion_dir, root_name, all_body_names, asset_cfg)

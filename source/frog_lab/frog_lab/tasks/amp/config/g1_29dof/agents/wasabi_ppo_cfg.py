@@ -1,20 +1,17 @@
 from __future__ import annotations
 
-from dataclasses import MISSING
-
 from isaaclab.utils import configclass
-from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, RslRlPpoAlgorithmCfg
+from isaaclab_rl.rsl_rl import RslRlPpoActorCriticCfg
+
+from frog_lab.rl_cfg.wasabi_cfg import RslRlWasabiAlgorithmCfg, RslRlWasabiRunnerCfg, WasabiCfg
+
+@configclass
+class G1_29DOFWasabiAlgorithmCfg(RslRlWasabiAlgorithmCfg):
+    pass
 
 
 @configclass
-class G1_29DOFWasabiAlgorithmCfg(RslRlPpoAlgorithmCfg):
-    class_name: str = "WasabiPPO"
-    wasabi_cfg: dict = MISSING
-
-
-@configclass
-class G1_29DOFWasabiRunnerCfg(RslRlOnPolicyRunnerCfg):
-    class_name: str = "OnPolicyRunner"
+class G1_29DOFWasabiRunnerCfg(RslRlWasabiRunnerCfg):
     num_steps_per_env = 24
     max_iterations = 5000
     save_interval = 50
@@ -41,25 +38,24 @@ class G1_29DOFWasabiRunnerCfg(RslRlOnPolicyRunnerCfg):
         lam=0.95,
         desired_kl=0.01,
         max_grad_norm=1.0,
-        wasabi_cfg={
-            "policy_state_key": "wasabi_policy",
-            "reference_state_key": "wasabi_reference",
-            "hidden_dims": [512, 256],
-            "activation": "elu",
-            "normalize_input": True,
-            "reward_type": "log",
-            "reward_coef": 1.0,
-            "task_reward_weight": 1.0,
-            "loss_type": "BCEWithLogitsLoss",
-            "loss_coef": 1.0,
-            "gradient_penalty_coef": 10.0,
-            "gradient_tolerance": 0.0,
-            "discriminator_optimizer": "adamw",
-            "learning_rate": 1.0e-3,
-        },
+        wasabi_cfg=WasabiCfg(
+            policy_state_key="wasabi_policy",
+            reference_state_key="wasabi_reference",
+            hidden_dims=[512, 256],
+            activation="elu",
+            normalize_input=True,
+            normalization_until=int(1e8),
+            reward_type="log",
+            reward_coef=1.0,
+            task_reward_weight=1.0,
+            loss_type="BCEWithLogitsLoss",
+            loss_coef=1.0,
+            gradient_penalty_coef=10.0,
+            gradient_tolerance=0.0,
+            weight_decay_coef=0.0,
+            logit_weight_decay_coef=0.0,
+            discriminator_backbone_gradient_only=False,
+            discriminator_optimizer="adamw",
+            learning_rate=1.0e-3,
+        ),
     )
-
-    obs_groups = {
-        "actor": ["policy"],
-        "critic": ["critic"],
-    }

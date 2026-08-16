@@ -67,6 +67,7 @@ class G1_29DOFWasabiFlatEnvCfg(WasabiFlatEnvCfg):
                 "motion_files": self.motion_dir,
                 "body_names": tuple(self.wasabi_body_names),
                 "anchor_name": self.anchor_body_name,
+                "root_name": self.root_link_name,
                 "all_body_names": tuple(self.all_body_names),
                 "joint_names": tuple(self.joint_names),
                 "time_between_frames": 0.02,

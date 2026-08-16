@@ -259,7 +259,7 @@ class EventCfg:
     init_motion_loader = EventTerm(
         func=mdp.init_motion_loader,
         mode="startup",
-        params={"motion_dir": ""},
+        params={"motion_dir": "", "root_name": "", "all_body_names": ()},
     )
 
     reset_from_motion = EventTerm(
@@ -267,6 +267,8 @@ class EventCfg:
         mode="reset",
         params={
             "motion_dir": "",
+            "root_name": "",
+            "all_body_names": (),
             "asset_cfg": SceneEntityCfg("robot", joint_names=".*", preserve_order=True),
         },
     )
