@@ -31,6 +31,9 @@ docker/.container.cfg
 **/.idea/
 **/.vscode/
 
+# Local agent instructions
+/AGENTS.md
+
 # Outputs
 **/output/*
 **/outputs/*
