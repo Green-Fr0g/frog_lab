@@ -1,149 +1,138 @@
-# Template for Isaac Lab Projects
+# Frog_lab
 
-## G1 locomotion
+基于 Isaac Lab 的人形机器人强化学习训练项目，当前主要面向 Unitree G1 29 自由度与 23 自由度机器人。
 
-Manager-based velocity locomotion is available for both Unitree G1 variants:
+项目包含常规速度跟踪任务，以及使用 `frog_rl` 实现的 AMP 和 WASABI 模仿学习训练任务。
 
-```bash
-python scripts/list_envs.py --keyword FrogLab-Isaac-Velocity
-python scripts/locomotion/rsl_rl/train.py --task FrogLab-Isaac-Velocity-Rough-Unitree-G1-29DOF-v0
-python scripts/locomotion/rsl_rl/train.py --task FrogLab-Isaac-Velocity-Flat-Unitree-G1-23DOF-v0
-```
+## 环境要求
 
-The two variants have independent environment registrations and PPO configurations under
-`source/frog_lab/frog_lab/tasks/locomotion/config/g1_23dof` and
-`source/frog_lab/frog_lab/tasks/locomotion/config/g1_29dof`.
+- Isaac Lab 与 Isaac Sim
+- Python 3.10 或更高版本
+- PyTorch
+- 已安装 Isaac Lab 的 Python 环境
 
-The URDF and meshes are stored under `source/model/g1` and are loaded directly by the corresponding
-G1 asset configuration.
+本项目不修改 Isaac Lab 源码，应放在 Isaac Lab 目录之外独立开发。
 
-## Overview
+## 安装
 
-This project/repository serves as a template for building projects or extensions based on Isaac Lab.
-It allows you to develop in an isolated environment, outside of the core Isaac Lab repository.
-
-**Key Features:**
-
-- `Isolation` Work outside the core Isaac Lab repository, ensuring that your development efforts remain self-contained.
-- `Flexibility` This template is set up to allow your code to be run as an extension in Omniverse.
-
-**Keywords:** extension, template, isaaclab
-
-## Installation
-
-- Install Isaac Lab by following the [installation guide](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html).
-  We recommend using the conda or uv installation as it simplifies calling Python scripts from the terminal.
-
-- Clone or copy this project/repository separately from the Isaac Lab installation (i.e. outside the `IsaacLab` directory):
-
-- Using a python interpreter that has Isaac Lab installed, install the library in editable mode using:
-
-    ```bash
-    # use 'PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-    python -m pip install -e source/frog_lab
-
-- Verify that the extension is correctly installed by:
-
-    - Listing the available tasks:
-
-        ```bash
-        # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-        python scripts/list_envs.py
-        ```
-
-    - Running a task:
-
-        ```bash
-        # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-        python scripts/<RL_LIBRARY>/train.py --task=<TASK_NAME>
-        ```
-
-    - Running a task with dummy agents:
-
-        These include dummy agents that output zero or random agents. They are useful to ensure that the environments are configured correctly.
-
-        - Zero-action agent
-
-            ```bash
-            # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-            python scripts/zero_agent.py --task=<TASK_NAME>
-            ```
-        - Random-action agent
-
-            ```bash
-            # use 'FULL_PATH_TO_isaaclab.sh|bat -p' instead of 'python' if Isaac Lab is not installed in Python venv or conda
-            python scripts/random_agent.py --task=<TASK_NAME>
-            ```
-
-### Set up IDE (Optional)
-
-To setup the IDE, please follow these instructions:
-
-- Run VSCode Tasks, by pressing `Ctrl+Shift+P`, selecting `Tasks: Run Task` and running the `setup_python_env` in the drop down menu.
-  When running this task, you will be prompted to add the absolute path to your Isaac Sim installation.
-
-If everything executes correctly, it should create a file .python.env in the `.vscode` directory.
-The file contains the python paths to all the extensions provided by Isaac Sim and Omniverse.
-This helps in indexing all the python modules for intelligent suggestions while writing code.
-
-### Setup as Omniverse Extension (Optional)
-
-We provide an example UI extension that will load upon enabling your extension defined in `source/frog_lab/frog_lab/ui_extension_example.py`.
-
-To enable your extension, follow these steps:
-
-1. **Add the search path of this project/repository** to the extension manager:
-    - Navigate to the extension manager using `Window` -> `Extensions`.
-    - Click on the **Hamburger Icon**, then go to `Settings`.
-    - In the `Extension Search Paths`, enter the absolute path to the `source` directory of this project/repository.
-    - If not already present, in the `Extension Search Paths`, enter the path that leads to Isaac Lab's extension directory directory (`IsaacLab/source`)
-    - Click on the **Hamburger Icon**, then click `Refresh`.
-
-2. **Search and enable your extension**:
-    - Find your extension under the `Third Party` category.
-    - Toggle it to enable your extension.
-
-## Code formatting
-
-We have a pre-commit template to automatically format your code.
-To install pre-commit:
+在已安装 Isaac Lab 的 Python 环境中执行：
 
 ```bash
-pip install pre-commit
+git clone git@github.com:Green-Fr0g/frog_lab.git
+cd frog_lab
+
+python -m pip install -e source/frog_lab
+export PYTHONPATH="$(pwd)/source:${PYTHONPATH}"
 ```
 
-Then you can run pre-commit with:
+`PYTHONPATH` 中的 `source` 路径用于加载项目内的 `frog_rl` 包。
+
+## 查看任务
 
 ```bash
-pre-commit run --all-files
+python scripts/list_envs.py
+python scripts/list_envs.py --keyword AMP
+python scripts/list_envs.py --keyword WASABI
 ```
 
-## Troubleshooting
+## 常规 PPO 训练
 
-### Pylance Missing Indexing of Extensions
+常规速度跟踪任务使用原生 RSL-RL 训练入口：
 
-In some VsCode versions, the indexing of part of the extensions is missing.
-In this case, add the path to your extension in `.vscode/settings.json` under the key `"python.analysis.extraPaths"`.
-
-```json
-{
-    "python.analysis.extraPaths": [
-        "<path-to-ext-repo>/source/frog_lab"
-    ]
-}
+```bash
+python scripts/rsl_rl/train.py \
+  --task FrogLab-Isaac-Velocity-Rough-Unitree-G1-29DOF-v0
 ```
 
-### Pylance Crash
+现有 `scripts/rsl_rl` 目录保持原生 RSL-RL 行为，不用于 AMP/WASABI 算法。
 
-If you encounter a crash in `pylance`, it is probable that too many files are indexed and you run out of memory.
-A possible solution is to exclude some of omniverse packages that are not used in your project.
-To do so, modify `.vscode/settings.json` and comment out packages under the key `"python.analysis.extraPaths"`
-Some examples of packages that can likely be excluded are:
+## AMP 与 WASABI 训练
 
-```json
-"<path-to-isaac-sim>/extscache/omni.anim.*"         // Animation packages
-"<path-to-isaac-sim>/extscache/omni.kit.*"          // Kit UI tools
-"<path-to-isaac-sim>/extscache/omni.graph.*"        // Graph UI tools
-"<path-to-isaac-sim>/extscache/omni.services.*"     // Services tools
-...
-```# Frog_lab
+AMP/WASABI 使用独立的 `frog_rl` 训练入口，避免与原生 RSL-RL runner 混用。
+
+### AMP
+
+```bash
+python scripts/frog_rl/train.py \
+  --task FrogLab-Isaac-AMP-Flat-Unitree-G1-29DOF-v0
+```
+
+AMP 配置位于：
+
+- 环境：`source/frog_lab/frog_lab/tasks/amp/config/g1_29dof/flat_env_cfg.py`
+- Agent：`source/frog_lab/frog_lab/tasks/amp/config/g1_29dof/agents/amp_ppo_cfg.py`
+
+AMP 任务使用 `AMPPPO`、运动专家数据和 `amp_state` 观察组训练判别器。
+
+### WASABI
+
+```bash
+python scripts/frog_rl/train.py \
+  --task FrogLab-Isaac-WASABI-Flat-Unitree-G1-29DOF-v0
+```
+
+WASABI 配置位于：
+
+- 环境：`source/frog_lab/frog_lab/tasks/amp/config/g1_29dof/wasabi_flat_env_cfg.py`
+- Agent：`source/frog_lab/frog_lab/tasks/amp/config/g1_29dof/agents/wasabi_ppo_cfg.py`
+
+WASABI 使用 `WasabiPPO`，并以 `wasabi_policy` 和 `wasabi_reference` 观察组构造判别器输入。
+
+### 常用参数
+
+```bash
+python scripts/frog_rl/train.py \
+  --task FrogLab-Isaac-AMP-Flat-Unitree-G1-29DOF-v0 \
+  --num_envs 1024 \
+  --max_iterations 5000 \
+  --seed 42
+```
+
+- `--num_envs`：并行环境数量。
+- `--max_iterations`：训练迭代次数。
+- `--seed`：随机种子。
+- `--device`：Isaac Lab 支持的计算设备，例如 `cuda:0`。
+- `--resume --load_run <运行目录> --checkpoint <模型文件>`：恢复训练。
+
+训练日志和模型保存至：
+
+```text
+logs/frog_rl/<experiment_name>/<时间戳>/
+```
+
+## 推理与导出
+
+使用独立的 `frog_rl` 推理脚本加载 AMP/WASABI checkpoint：
+
+```bash
+python scripts/frog_rl/play.py \
+  --task FrogLab-Isaac-AMP-Flat-Unitree-G1-29DOF-v0 \
+  --checkpoint /绝对路径/model_5000.pt \
+  --num_envs 1
+```
+
+推理脚本会在 checkpoint 同级目录创建 `exported` 文件夹，并导出：
+
+- `policy.pt`：TorchScript 策略
+- `policy.onnx`：ONNX 策略
+
+## 运动数据
+
+G1 29 自由度 AMP/WASABI motion 数据位于：
+
+```text
+source/frog_lab/frog_lab/tasks/amp/config/g1_29dof/motions/
+```
+
+每个 `.npz` 文件应包含 `body_pos_w`、`body_quat_w`、`body_lin_vel_w`、`body_ang_vel_w`、`joint_pos`、`joint_vel` 和 `fps`。当前 G1 数据约定为 30 个刚体和 29 个关节。
+
+## 开发检查
+
+不启动 Isaac Sim 时，可以进行基础语法检查：
+
+```bash
+python -m py_compile scripts/frog_rl/train.py scripts/frog_rl/play.py
+git diff --check
+```
+
+运行完整训练或推理前，需要确认 Isaac Lab、PyTorch、Isaac Sim 和 GPU 环境已正确安装。
