@@ -22,10 +22,10 @@ git clone git@github.com:Green-Fr0g/frog_lab.git
 cd frog_lab
 
 python -m pip install -e source/frog_lab
-export PYTHONPATH="$(pwd)/source:${PYTHONPATH}"
+python -m pip install -e source/frog_rl
 ```
 
-`PYTHONPATH` 中的 `source` 路径用于加载项目内的 `frog_rl` 包。
+安装完成后，`frog_lab` 提供 Isaac Lab 任务与配置，`frog_rl` 提供自定义训练算法和 runner。
 
 ## 查看任务
 
