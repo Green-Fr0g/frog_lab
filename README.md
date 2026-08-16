@@ -27,6 +27,21 @@ python -m pip install -e source/frog_rl
 
 安装完成后，`frog_lab` 提供 Isaac Lab 任务与配置，`frog_rl` 提供自定义训练算法和 runner。
 
+`frog_rl` 使用与 RSL-RL 一致的嵌套包结构：
+
+```text
+source/frog_rl/
+├── pyproject.toml
+├── setup.py
+└── frog_rl/
+    ├── algorithms/
+    ├── runners/
+    ├── storage/
+    └── utils/
+```
+
+因此 `python -m pip install -e source/frog_rl` 会将内部 `frog_rl` 目录安装为可编辑 Python 包；修改算法源码后不需要重新安装。
+
 ## 查看任务
 
 ```bash

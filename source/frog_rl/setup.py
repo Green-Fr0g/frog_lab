@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from setuptools import setup
+from setuptools import find_packages, setup
 
 
 setup(
@@ -23,16 +23,5 @@ setup(
         "onnx",
         "onnxscript>=0.5.4",
     ],
-    packages=[
-        "frog_rl",
-        "frog_rl.algorithms",
-        "frog_rl.env",
-        "frog_rl.extensions",
-        "frog_rl.models",
-        "frog_rl.modules",
-        "frog_rl.runners",
-        "frog_rl.storage",
-        "frog_rl.utils",
-    ],
-    package_dir={"frog_rl": "."},
+    packages=find_packages(include=["frog_rl*"]),
 )
