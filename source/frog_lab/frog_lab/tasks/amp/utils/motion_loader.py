@@ -8,7 +8,7 @@ import torch
 from isaaclab.utils.math import matrix_from_quat, quat_apply_inverse, subtract_frame_transforms
 
 
-class G1AMPBodyStateMotionLoader:
+class AMPBodyStateMotionLoader:
     """Loads AMP expert states from G1 body-state `.npz` motion files."""
 
     def __init__(
