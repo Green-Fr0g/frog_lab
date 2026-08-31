@@ -126,7 +126,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         resume_path = None
 
     if args_cli.video:
-        video_kwargs = {
+        video_kwargs = {代码
             "video_folder": os.path.join(log_dir, "videos", "train"),
             "step_trigger": lambda step: step % args_cli.video_interval == 0,
             "video_length": args_cli.video_length,

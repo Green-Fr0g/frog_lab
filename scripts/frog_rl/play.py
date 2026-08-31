@@ -21,6 +21,9 @@ parser.add_argument("--num_envs", type=int, default=None)
 parser.add_argument("--task", type=str, default=None)
 parser.add_argument("--agent", type=str, default="rsl_rl_cfg_entry_point")
 parser.add_argument("--real-time", action="store_true", default=False)
+control_group = parser.add_mutually_exclusive_group()
+control_group.add_argument("--keyboard", action="store_true", help="Use the keyboard to control velocity commands.")
+control_group.add_argument("--joy", action="store_true", help="Use a gamepad to control velocity commands.")
 cli_args.add_rl_args(parser)
 AppLauncher.add_app_launcher_args(parser)
 args_cli, hydra_args = parser.parse_known_args()
@@ -35,11 +38,15 @@ simulation_app = app_launcher.app
 import gymnasium as gym
 import torch
 from frog_rl.runners import DistillationRunner, OnPolicyRunner
+from isaaclab.devices import Se2Gamepad, Se2GamepadCfg, Se2Keyboard, Se2KeyboardCfg
 from isaaclab.envs import DirectMARLEnv, DirectMARLEnvCfg, DirectRLEnvCfg, ManagerBasedRLEnvCfg, multi_agent_to_single_agent
+from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.utils.assets import retrieve_file_path
 from isaaclab_rl.rsl_rl import RslRlBaseRunnerCfg, RslRlVecEnvWrapper
 from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
+
+from camera_follow import CameraFollower
 
 import isaaclab_tasks  # noqa: F401
 import frog_lab.tasks  # noqa: F401
@@ -47,10 +54,30 @@ import frog_lab.tasks  # noqa: F401
 
 @hydra_task_config(args_cli.task, args_cli.agent)
 def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
+    camera_follower = CameraFollower() if args_cli.keyboard or args_cli.joy else None
     agent_cfg = cli_args.update_cfg(agent_cfg, args_cli)
     env_cfg.scene.num_envs = args_cli.num_envs if args_cli.num_envs is not None else env_cfg.scene.num_envs
     env_cfg.seed = agent_cfg.seed
     env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
+
+    if args_cli.keyboard or args_cli.joy:
+        env_cfg.scene.num_envs = 1
+        env_cfg.terminations.time_out = None
+        env_cfg.commands.base_velocity.debug_vis = False
+
+        controller_cfg_cls = Se2KeyboardCfg if args_cli.keyboard else Se2GamepadCfg
+        controller_cls = Se2Keyboard if args_cli.keyboard else Se2Gamepad
+        controller = controller_cls(
+            controller_cfg_cls(
+                v_x_sensitivity=env_cfg.commands.base_velocity.ranges.lin_vel_x[1],
+                v_y_sensitivity=env_cfg.commands.base_velocity.ranges.lin_vel_y[1],
+                omega_z_sensitivity=env_cfg.commands.base_velocity.ranges.ang_vel_z[1],
+            )
+        )
+        print(f"[INFO] {controller}")
+        env_cfg.observations.policy.velocity_commands = ObsTerm(
+            func=lambda env: controller.advance().unsqueeze(0).to(env.device),
+        )
 
     log_root_path = os.path.abspath(os.path.join("logs", "frog_rl", agent_cfg.experiment_name))
     if args_cli.checkpoint:
@@ -91,6 +118,10 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             actions = policy(obs)
             obs, _, dones, _ = env.step(actions)
             policy.reset(dones)
+        if camera_follower is not None:
+            if torch.any(dones).item():
+                camera_follower.reset()
+            camera_follower.update(env)
         timestep += 1
         if args_cli.video and timestep >= args_cli.video_length:
             break

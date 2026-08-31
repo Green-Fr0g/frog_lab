@@ -126,7 +126,7 @@ class ObservationsCfg:
         )
 
         motion_anchor_ori_b = ObsTerm(
-            func=mdp.motion_anchmotion_anchor_ori_bor_ori_b, params={"command_name": "motion"}, noise=Unoise(n_min=-0.05, n_max=0.05)
+            func=mdp.motion_anchor_ori_b, params={"command_name": "motion"}, noise=Unoise(n_min=-0.05, n_max=0.05)
         )
 
         base_lin_vel = ObsTerm(

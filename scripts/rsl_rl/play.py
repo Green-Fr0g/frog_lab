@@ -32,6 +32,9 @@ parser.add_argument(
     help="Use the pre-trained checkpoint from Nucleus.",
 )
 parser.add_argument("--real-time", action="store_true", default=False, help="Run in real-time, if possible.")
+control_group = parser.add_mutually_exclusive_group()
+control_group.add_argument("--keyboard", action="store_true", help="Use the keyboard to control velocity commands.")
+control_group.add_argument("--joy", action="store_true", help="Use a gamepad to control velocity commands.")
 cli_args.add_rsl_rl_args(parser)
 AppLauncher.add_app_launcher_args(parser)
 args_cli, hydra_args = parser.parse_known_args()
@@ -55,6 +58,7 @@ import torch
 from packaging import version
 from rsl_rl.runners import DistillationRunner, OnPolicyRunner
 
+from isaaclab.devices import Se2Gamepad, Se2GamepadCfg, Se2Keyboard, Se2KeyboardCfg
 from isaaclab.envs import (
     DirectMARLEnv,
     DirectMARLEnvCfg,
@@ -62,6 +66,7 @@ from isaaclab.envs import (
     ManagerBasedRLEnvCfg,
     multi_agent_to_single_agent,
 )
+from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.utils.assets import retrieve_file_path
 from isaaclab.utils.dict import print_dict
 from isaaclab_rl.rsl_rl import RslRlBaseRunnerCfg, RslRlVecEnvWrapper, export_policy_as_jit, export_policy_as_onnx
@@ -71,6 +76,8 @@ import isaaclab_tasks  # noqa: F401
 from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
+from camera_follow import CameraFollower
+
 import frog_lab.tasks  # noqa: F401
 
 installed_version = metadata.version("rsl-rl-lib")
@@ -79,6 +86,7 @@ installed_version = metadata.version("rsl-rl-lib")
 @hydra_task_config(args_cli.task, args_cli.agent)
 def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: RslRlBaseRunnerCfg):
     """Play with RSL-RL agent."""
+    camera_follower = CameraFollower() if args_cli.keyboard or args_cli.joy else None
     task_name = args_cli.task.split(":")[-1]
     train_task_name = task_name.replace("-Play", "")
 
@@ -86,6 +94,25 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     env_cfg.scene.num_envs = args_cli.num_envs if args_cli.num_envs is not None else env_cfg.scene.num_envs
     env_cfg.seed = agent_cfg.seed
     env_cfg.sim.device = args_cli.device if args_cli.device is not None else env_cfg.sim.device
+
+    if args_cli.keyboard or args_cli.joy:
+        env_cfg.scene.num_envs = 1
+        env_cfg.terminations.time_out = None
+        env_cfg.commands.base_velocity.debug_vis = False
+
+        controller_cfg_cls = Se2KeyboardCfg if args_cli.keyboard else Se2GamepadCfg
+        controller_cls = Se2Keyboard if args_cli.keyboard else Se2Gamepad
+        controller = controller_cls(
+            controller_cfg_cls(
+                v_x_sensitivity=env_cfg.commands.base_velocity.ranges.lin_vel_x[1],
+                v_y_sensitivity=env_cfg.commands.base_velocity.ranges.lin_vel_y[1],
+                omega_z_sensitivity=env_cfg.commands.base_velocity.ranges.ang_vel_z[1],
+            )
+        )
+        print(f"[INFO] {controller}")
+        env_cfg.observations.policy.velocity_commands = ObsTerm(
+            func=lambda env: controller.advance().unsqueeze(0).to(env.device),
+        )
 
     log_root_path = os.path.abspath(os.path.join("logs", "rsl_rl", agent_cfg.experiment_name))
     print(f"[INFO] Loading experiment from directory: {log_root_path}")
@@ -163,6 +190,10 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 policy.reset(dones)
             else:
                 policy_nn.reset(dones)
+        if camera_follower is not None:
+            if torch.any(dones).item():
+                camera_follower.reset()
+            camera_follower.update(env)
         if args_cli.video:
             timestep += 1
             if timestep == args_cli.video_length:
