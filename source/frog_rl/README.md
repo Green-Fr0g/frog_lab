@@ -1,21 +1,49 @@
-# frog_rl
+# Frog-RL
 
-`frog_rl` 是 Frog Lab 使用的强化学习算法包，基于 PyTorch，包含 PPO、AMP、WASABI、蒸馏、RND 和相关训练组件。
+A fast and simple implementation of learning algorithms for robotics. For an overview of the library please have a look at https://arxiv.org/pdf/2509.10771.
 
-项目根目录保留打包元数据，实际 Python 包位于 `frog_rl/` 子目录。这一结构与 RSL-RL 一致，便于使用 setuptools 自动发现 `frog_rl` 及其子包。
+Environment repositories using the framework:
 
-## 安装
+* **`Isaac Lab`** (built on top of NVIDIA Isaac Sim): https://github.com/isaac-sim/IsaacLab
+* **`Legged Gym`** (built on top of NVIDIA Isaac Gym): https://leggedrobotics.github.io/legged_gym/
+* **`MuJoCo Playground`** (built on top of MuJoCo MJX and Warp): https://github.com/google-deepmind/mujoco_playground/
 
-在项目根目录执行：
+## Setup
 
-```bash
-python -m pip install -e source/frog_rl
-```
-
-项目中的 Isaac Lab 环境配置需要另外安装：
+The package can be installed via PyPI with:
 
 ```bash
-python -m pip install -e source/frog_lab
+pip install frog-rl
 ```
 
-AMP/WASABI 训练入口位于 `scripts/frog_rl/train.py`。
+or by cloning this repository and installing it with:
+
+```bash
+git clone https://github.com/Green-Fr0g/frog_rl
+cd frog_rl
+pip install -e .
+```
+
+The package supports the following logging frameworks which can be configured through `logger`:
+
+* Tensorboard: https://www.tensorflow.org/tensorboard/
+* Weights & Biases: https://wandb.ai/site
+* Neptune: https://docs.neptune.ai/
+
+## MoE PPO
+
+To use the mixture-of-experts actor-critic with PPO, set the policy class to `ActorCriticMoE`:
+
+```yaml
+policy:
+  class_name: ActorCriticMoE
+  actor_hidden_dims: [256, 256, 256]
+  critic_hidden_dims: [256, 256, 256]
+  actor_num_experts: 4
+  critic_num_experts: 4
+  actor_gate_hidden_dims: [64]
+  critic_gate_hidden_dims: [64]
+  activation: elu
+  init_noise_std: 1.0
+  noise_std_type: scalar
+```
