@@ -1,0 +1,3 @@
+[submodule "source/frog_rl"]
+	path = source/frog_rl
+	url = git@github.com:Green-Fr0g/frog_rl.git
