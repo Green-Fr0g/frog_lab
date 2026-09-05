@@ -17,58 +17,55 @@ from isaaclab_rl.rsl_rl import (
 class WasabiCfg:
     """Configuration for the WASABI discriminator and reward."""
 
-    policy_state_key: str = MISSING
+    wasabi_policy_state_key: str = MISSING
     """The observation key containing the policy state."""
 
-    reference_state_key: str = MISSING
+    wasabi_reference_state_key: str = MISSING
     """The observation key containing the reference state."""
 
-    hidden_dims: list[int] = MISSING
+    wasabi_discr_hidden_dims: list[int] = MISSING
     """The hidden dimensions of the WASABI discriminator."""
 
-    activation: str = MISSING
+    wasabi_discr_activation: str = MISSING
     """The activation function used by the discriminator."""
 
-    normalize_input: bool = MISSING
+    wasabi_normalize_input: bool = MISSING
     """Whether to normalize discriminator inputs."""
 
-    normalization_until: int | None = MISSING
+    wasabi_normalization_until: int | None = MISSING
     """The training step until which discriminator inputs are normalized."""
 
-    reward_type: Literal["log", "quad", "wasserstein"] = MISSING
+    wasabi_reward_type: Literal["log", "quad", "wasserstein"] = MISSING
     """The type of reward produced by the discriminator."""
 
-    reward_coef: float = MISSING
+    wasabi_reward_coef: float = MISSING
     """The coefficient of the WASABI reward."""
 
-    task_reward_weight: float = MISSING
+    wasabi_task_reward_weight: float = MISSING
     """The weight of the task reward."""
 
-    loss_type: Literal["BCEWithLogitsLoss", "MSELoss", "WassersteinLoss"] = MISSING
+    wasabi_loss_type: Literal["BCEWithLogitsLoss", "MSELoss", "WassersteinLoss"] = MISSING
     """The loss used to train the discriminator."""
 
-    loss_coef: float = MISSING
+    wasabi_loss_coef: float = MISSING
     """The coefficient of the discriminator loss."""
 
-    gradient_penalty_coef: float = MISSING
+    wasabi_grad_pen_coef: float = MISSING
     """The coefficient of the discriminator gradient penalty."""
 
-    gradient_tolerance: float = MISSING
+    wasabi_grad_tolerance: float = MISSING
     """The target gradient norm tolerance for the gradient penalty."""
 
-    weight_decay_coef: float = MISSING
+    wasabi_trunk_weight_decay: float = MISSING
     """The weight decay coefficient for the discriminator backbone."""
 
-    logit_weight_decay_coef: float = MISSING
+    wasabi_head_weight_decay: float = MISSING
     """The weight decay coefficient for discriminator logits."""
 
-    discriminator_backbone_gradient_only: bool = MISSING
-    """Whether to backpropagate discriminator gradients through the backbone only."""
-
-    discriminator_optimizer: str = MISSING
+    wasabi_discriminator_optimizer: str = MISSING
     """The optimizer used for the discriminator."""
 
-    learning_rate: float | None = MISSING
+    wasabi_discriminator_lr: float | None = MISSING
     """The discriminator learning rate override."""
 
 

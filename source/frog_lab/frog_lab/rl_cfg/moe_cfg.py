@@ -16,14 +16,20 @@ from isaaclab_rl.rsl_rl import (
 class RslRlMoEActorCriticCfg(RslRlPpoActorCriticCfg):
     """Configuration for a PPO actor-critic with mixture-of-experts heads."""
 
-    class_name: str = MISSING
+    class_name: str = "ActorCriticMoE"
     """The policy class name."""
 
-    num_experts: int = MISSING
-    """The number of expert networks in each mixture-of-experts head."""
+    actor_num_experts: int = MISSING
+    """The number of expert networks in the actor mixture-of-experts head."""
 
-    gate_hidden_dims: list[int] = MISSING
-    """The hidden dimensions of the mixture-of-experts gating network."""
+    critic_num_experts: int = MISSING
+    """The number of expert networks in the critic mixture-of-experts head."""
+
+    actor_gate_hidden_dims: list[int] = MISSING
+    """The hidden dimensions of the actor mixture-of-experts gating network."""
+
+    critic_gate_hidden_dims: list[int] = MISSING
+    """The hidden dimensions of the critic mixture-of-experts gating network."""
 
 
 @configclass

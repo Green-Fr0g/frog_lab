@@ -52,7 +52,7 @@ class G1_29DOFAmpFlatRunnerCfg(RslRlAmpRunnerCfg):
             amp_head_weight_decay=1.0e-2,
             grad_pen_coef=10.0,
             amp_task_reward_lerp=0.75,
-            expert_state_key="amp_state",
+            amp_state_key="amp_state",
             motion_loader_class_name="frog_lab.tasks.amp.utils.motion_loader:AMPBodyStateMotionLoader",
             motion_loader_kwargs={
                 "motion_files": G1_29DOFAmpFlatEnvCfg().motion_dir,

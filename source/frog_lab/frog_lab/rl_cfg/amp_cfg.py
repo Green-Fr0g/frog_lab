@@ -47,7 +47,7 @@ class AmpCfg:
     amp_task_reward_lerp: float = MISSING
     """The interpolation factor between task and AMP rewards."""
 
-    expert_state_key: str = MISSING
+    amp_state_key: str = MISSING
     """The observation key used for the AMP expert state."""
 
     motion_loader_class_name: str = MISSING

@@ -54,7 +54,7 @@ class AMPBodyStateMotionLoader:
     def state_dim(self) -> int:
         return self.observation_dim
 
-    def feed_forward_generator(self, num_mini_batch: int, mini_batch_size: int):
+    def mini_batch_generator(self, num_mini_batch: int, mini_batch_size: int):
         for batch_idx in range(num_mini_batch):
             motion_idx = batch_idx % len(self._states)
             states = self._states[motion_idx]
