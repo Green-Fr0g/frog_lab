@@ -30,15 +30,15 @@ def init_wasabi_motion_reference(
     del env_ids
     asset = env.scene["robot"]
     actual_body_names = tuple(getattr(asset.data, "body_names", ()))
-    if actual_body_names and actual_body_names != tuple(all_body_names):
+    if actual_body_names and set(actual_body_names) != set(all_body_names):
         raise ValueError(
-            "WASABI robot/motion body order mismatch. "
+            "WASABI robot/motion body names mismatch. "
             f"Robot={actual_body_names}, motion={tuple(all_body_names)}"
         )
     actual_joint_names = tuple(getattr(asset.data, "joint_names", ()))
-    if actual_joint_names and actual_joint_names != tuple(joint_names):
+    if actual_joint_names and set(actual_joint_names) != set(joint_names):
         raise ValueError(
-            "WASABI robot/motion joint order mismatch. "
+            "WASABI robot/motion joint names mismatch. "
             f"Robot={actual_joint_names}, motion={tuple(joint_names)}"
         )
     WasabiMotionReference.initialize_for_env(
