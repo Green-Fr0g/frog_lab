@@ -26,6 +26,7 @@ G1_29DOF_URDF_PATH = f"{FROG_LAB_DATA_DIR}/g1/urdf/g1_29dof_rev_1_0.urdf"
 G1_CYLINDER_CFG = ArticulationCfg(
     spawn=sim_utils.UrdfFileCfg(
         fix_base=False,
+        merge_fixed_joints=True,
         replace_cylinders_with_capsules=True,
         asset_path=str(G1_29DOF_URDF_PATH),
         activate_contact_sensors=True,

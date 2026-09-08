@@ -50,20 +50,26 @@ python scripts/list_envs.py --keyword AMP
 python scripts/list_envs.py --keyword WASABI
 ```
 
-## 常规 PPO 训练
+## 训练
 
-常规速度跟踪任务使用原生 RSL-RL 训练入口：
+所有 FrogLab 任务都通过 `scripts/frog_rl/train.py` 训练，默认读取 `frog_rl_cfg_entry_point`。
 
 ```bash
-python scripts/rsl_rl/train.py \
+python scripts/frog_rl/train.py \
   --task FrogLab-Isaac-Velocity-Rough-Unitree-G1-29DOF-v0
+
+python scripts/frog_rl/train.py \
+  --task FrogLab-Isaac-Mimic-Flat-Unitree-G1-29DOF-v0 --headless
+
+python scripts/frog_rl/train.py \
+  --task FrogLab-Isaac-AMP-Flat-Unitree-G1-29DOF-v0
 ```
 
-现有 `scripts/rsl_rl` 目录保持原生 RSL-RL 行为，不用于 AMP/WASABI 算法。
+`scripts/rsl_rl/train.py` 仍可用于原生 RSL-RL，读取 `rsl_rl_cfg_entry_point`。
 
 ## AMP 与 WASABI 训练
 
-AMP/WASABI 使用独立的 `frog_rl` 训练入口，避免与原生 RSL-RL runner 混用。
+AMP/WASABI 同样走 `frog_rl` 训练入口，runner 配置指向 `AMPPPO` / `WasabiPPO`。
 
 ### AMP
 

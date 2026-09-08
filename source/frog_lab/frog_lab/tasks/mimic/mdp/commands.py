@@ -27,8 +27,25 @@ if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 
 
+def _as_str_list(values) -> list[str]:
+    """Convert npz name arrays to a list of strings."""
+    return [str(name) for name in np.asarray(values).tolist()]
+
+
+def _index_by_names(available: Sequence[str], requested: Sequence[str], kind: str) -> list[int]:
+    """Map requested names onto a motion-file name list."""
+    lookup = {name: index for index, name in enumerate(available)}
+    missing = [name for name in requested if name not in lookup]
+    if missing:
+        raise ValueError(
+            f"Motion {kind} names {missing} were not found in the motion file. "
+            f"Available {kind} names: {list(available)}"
+        )
+    return [lookup[name] for name in requested]
+
+
 class MotionLoader:
-    def __init__(self, motion_file: str, body_indexes: Sequence[int], device: str = "cpu"):
+    def __init__(self, motion_file: str, body_names: Sequence[str] | None = None, device: str = "cpu"):
         assert os.path.isfile(motion_file), f"Invalid file path: {motion_file}"
         data = np.load(motion_file)
         self.fps = data["fps"]
@@ -38,8 +55,32 @@ class MotionLoader:
         self._body_quat_w = torch.tensor(data["body_quat_w"], dtype=torch.float32, device=device)
         self._body_lin_vel_w = torch.tensor(data["body_lin_vel_w"], dtype=torch.float32, device=device)
         self._body_ang_vel_w = torch.tensor(data["body_ang_vel_w"], dtype=torch.float32, device=device)
-        self._body_indexes = body_indexes
         self.time_step_total = self.joint_pos.shape[0]
+
+        if "body_names" not in data:
+            raise KeyError(
+                f"Motion file '{motion_file}' is missing 'body_names'. "
+                "Re-export the motion with scripts/mimic/csv_to_npz.py."
+            )
+        self.motion_body_names = _as_str_list(data["body_names"])
+        if len(self.motion_body_names) != self._body_pos_w.shape[1]:
+            raise ValueError(
+                f"Motion file '{motion_file}' has {len(self.motion_body_names)} body_names "
+                f"but body_pos_w has {self._body_pos_w.shape[1]} bodies."
+            )
+        requested_body_names = list(body_names) if body_names is not None else list(self.motion_body_names)
+        self._body_indexes = torch.tensor(
+            _index_by_names(self.motion_body_names, requested_body_names, "body"),
+            dtype=torch.long,
+            device=device,
+        )
+
+        self.joint_names = _as_str_list(data["joint_names"]) if "joint_names" in data else None
+        if self.joint_names is not None and len(self.joint_names) != self.joint_pos.shape[1]:
+            raise ValueError(
+                f"Motion file '{motion_file}' has {len(self.joint_names)} joint_names "
+                f"but joint_pos has {self.joint_pos.shape[1]} joints."
+            )
 
     @property
     def body_pos_w(self) -> torch.Tensor:
@@ -71,7 +112,8 @@ class MotionCommand(CommandTerm):
             self.robot.find_bodies(self.cfg.body_names, preserve_order=True)[0], dtype=torch.long, device=self.device
         )
 
-        self.motion = MotionLoader(self.cfg.motion_file, self.body_indexes, device=self.device)
+        self.motion = MotionLoader(self.cfg.motion_file, body_names=self.cfg.body_names, device=self.device)
+        self._align_motion_joints_to_robot()
         self.time_steps = torch.zeros(self.num_envs, dtype=torch.long, device=self.device)
         self.body_pos_relative_w = torch.zeros(self.num_envs, len(cfg.body_names), 3, device=self.device)
         self.body_quat_relative_w = torch.zeros(self.num_envs, len(cfg.body_names), 4, device=self.device)
@@ -96,6 +138,19 @@ class MotionCommand(CommandTerm):
         self.metrics["sampling_entropy"] = torch.zeros(self.num_envs, device=self.device)
         self.metrics["sampling_top1_prob"] = torch.zeros(self.num_envs, device=self.device)
         self.metrics["sampling_top1_bin"] = torch.zeros(self.num_envs, device=self.device)
+
+    def _align_motion_joints_to_robot(self):
+        """Reorder motion joints to the live robot joint order when names are available."""
+        if self.motion.joint_names is None:
+            return
+        joint_indexes = torch.tensor(
+            _index_by_names(self.motion.joint_names, list(self.robot.joint_names), "joint"),
+            dtype=torch.long,
+            device=self.device,
+        )
+        self.motion.joint_pos = self.motion.joint_pos[:, joint_indexes]
+        self.motion.joint_vel = self.motion.joint_vel[:, joint_indexes]
+        self.motion.joint_names = list(self.robot.joint_names)
 
     @property
     def command(self) -> torch.Tensor:  # TODO Consider again if this is the best observation

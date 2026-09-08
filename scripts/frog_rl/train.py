@@ -1,4 +1,4 @@
-"""Train AMP/WASABI agents with the standalone frog_rl runner."""
+"""Train frog_lab agents with the standalone frog_rl runner."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ parser.add_argument("--video_length", type=int, default=200)
 parser.add_argument("--video_interval", type=int, default=2000)
 parser.add_argument("--num_envs", type=int, default=None)
 parser.add_argument("--task", type=str, default=None)
-parser.add_argument("--agent", type=str, default="rsl_rl_cfg_entry_point")
+parser.add_argument("--agent", type=str, default="frog_rl_cfg_entry_point")
 parser.add_argument("--seed", type=int, default=None)
 parser.add_argument("--max_iterations", type=int, default=None)
 parser.add_argument("--distributed", action="store_true", default=False)

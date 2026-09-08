@@ -100,7 +100,7 @@ class G1_29DOFFlatEnvCfg(TrackingEnvCfg):
             "pitch": (-0.52, 0.52),
             "yaw": (-0.78, 0.78),
         }
-        self.commands.motion.joint_position_range = (-0.1, 0.1),
+        self.commands.motion.joint_position_range = (-0.1, 0.1)
         self.commands.motion.motion_file = self.motion_file
         self.commands.motion.anchor_body_name = self.anchor_body_name
         self.commands.motion.body_names = [

@@ -1,4 +1,4 @@
-"""Play and export AMP/WASABI checkpoints with frog_rl."""
+"""Play and export frog_rl checkpoints."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ parser.add_argument("--video", action="store_true", default=False)
 parser.add_argument("--video_length", type=int, default=200)
 parser.add_argument("--num_envs", type=int, default=None)
 parser.add_argument("--task", type=str, default=None)
-parser.add_argument("--agent", type=str, default="rsl_rl_cfg_entry_point")
+parser.add_argument("--agent", type=str, default="frog_rl_cfg_entry_point")
 parser.add_argument("--real-time", action="store_true", default=False)
 control_group = parser.add_mutually_exclusive_group()
 control_group.add_argument("--keyboard", action="store_true", help="Use the keyboard to control velocity commands.")

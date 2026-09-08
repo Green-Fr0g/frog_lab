@@ -13,6 +13,7 @@ gym.register(
     kwargs={
         "env_cfg_entry_point": f"{__name__}.flat_env_cfg:G1_29DOFFlatEnvCfg",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:G1_29DOFFlatPPORunnerCfg",
+        "frog_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:G1_29DOFFlatPPORunnerCfg",
     },
 )
 
@@ -23,6 +24,7 @@ gym.register(
     kwargs={
         "env_cfg_entry_point": f"{__name__}.flat_env_cfg:G1_29DOFFlatWoStateEstimationEnvCfg",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:G1_29DOFFlatPPORunnerCfg",
+        "frog_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:G1_29DOFFlatPPORunnerCfg",
     },
 )
 
@@ -34,5 +36,6 @@ gym.register(
     kwargs={
         "env_cfg_entry_point": f"{__name__}.flat_env_cfg:G1_29DOFFlatLowFreqEnvCfg",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:G1_29DOFFlatLowFreqPPORunnerCfg",
+        "frog_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:G1_29DOFFlatLowFreqPPORunnerCfg",
     },
 )
