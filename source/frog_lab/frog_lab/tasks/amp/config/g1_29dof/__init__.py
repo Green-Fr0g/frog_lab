@@ -10,7 +10,6 @@ gym.register(
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{__name__}.flat_env_cfg:G1_29DOFAmpFlatEnvCfg",
-        "rsl_rl_cfg_entry_point": f"{agents.__name__}.amp_ppo_cfg:G1_29DOFAmpFlatRunnerCfg",
         "frog_rl_cfg_entry_point": f"{agents.__name__}.amp_ppo_cfg:G1_29DOFAmpFlatRunnerCfg",
     },
 )
@@ -21,7 +20,6 @@ gym.register(
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{__name__}.wasabi_flat_env_cfg:G1_29DOFWasabiFlatEnvCfg",
-        "rsl_rl_cfg_entry_point": f"{agents.__name__}.wasabi_ppo_cfg:G1_29DOFWasabiRunnerCfg",
         "frog_rl_cfg_entry_point": f"{agents.__name__}.wasabi_ppo_cfg:G1_29DOFWasabiRunnerCfg",
     },
 )
