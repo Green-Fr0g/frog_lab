@@ -24,8 +24,6 @@ from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description="Replay motion from csv file and output to npz file.")
 parser.add_argument("--config", type=str, default="motion_data/config/g1.yaml", help="Motion config yaml.")
-parser.add_argument("--input_file", type=str, default=None, help="Override the CSV path in the config.")
-parser.add_argument("--input_fps", type=int, default=None, help="Override the CSV fps in the config.")
 parser.add_argument(
     "--frame_range",
     nargs=2,
@@ -52,12 +50,9 @@ from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 from isaaclab.utils.math import axis_angle_from_quat, quat_conjugate, quat_mul, quat_slerp
 
+#asset registry
+from frog_lab.assets.g1_23dof import G1_23DOF_CFG
 from frog_lab.assets.g1_mimic import G1_CYLINDER_CFG
-
-
-ROBOT_ASSET_REGISTRY: dict[str, ArticulationCfg] = {
-    "g1": G1_CYLINDER_CFG,
-}
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -74,21 +69,6 @@ def _resolve_path(base_dir: Path, maybe_path: str) -> Path:
         return path
     return (base_dir / path).resolve()
 
-
-def _as_str_list(values) -> list[str]:
-    return [str(name) for name in np.asarray(values).tolist()]
-
-
-def _index_by_names(available: list[str], requested: list[str], kind: str) -> list[int]:
-    lookup = {name: index for index, name in enumerate(available)}
-    missing = [name for name in requested if name not in lookup]
-    if missing:
-        raise ValueError(
-            f"Motion {kind} names {missing} were not found. Available {kind} names: {list(available)}"
-        )
-    return [lookup[name] for name in requested]
-
-
 def _root_quat_to_wxyz(quat: torch.Tensor, order: str) -> torch.Tensor:
     if order == "wxyz":
         return quat
@@ -97,16 +77,28 @@ def _root_quat_to_wxyz(quat: torch.Tensor, order: str) -> torch.Tensor:
     raise ValueError(f"Unsupported root quaternion order: {order}")
 
 
-@configclass
-class ReplayMotionSceneCfg(InteractiveSceneCfg):
-    ground = AssetBaseCfg(prim_path="/World/defaultGroundPlane", spawn=sim_utils.GroundPlaneCfg())
-    sky_light = AssetBaseCfg(
-        prim_path="/World/skyLight",
-        spawn=sim_utils.DomeLightCfg(
-            intensity=750.0,
-            texture_file=f"{ISAAC_NUCLEUS_DIR}/Materials/Textures/Skies/PolyHaven/kloofendal_43d_clear_puresky_4k.hdr",
-        ),
-    )
+def _get_robot_asset_cfg(robot_name: str) -> ArticulationCfg:
+    if robot_name == "g1":
+        return G1_CYLINDER_CFG
+    if robot_name == "g1_23":
+        return G1_23DOF_CFG
+    raise KeyError(f"Unknown robot_name '{robot_name}'. Supported: g1, g1_23dof")
+
+
+def _build_scene_cfg(robot_cfg: ArticulationCfg) -> type[InteractiveSceneCfg]:
+    @configclass
+    class ReplayMotionSceneCfg(InteractiveSceneCfg):
+        ground = AssetBaseCfg(prim_path="/World/defaultGroundPlane", spawn=sim_utils.GroundPlaneCfg())
+        sky_light = AssetBaseCfg(
+            prim_path="/World/skyLight",
+            spawn=sim_utils.DomeLightCfg(
+                intensity=750.0,
+                texture_file=f"{ISAAC_NUCLEUS_DIR}/Materials/Textures/Skies/PolyHaven/kloofendal_43d_clear_puresky_4k.hdr",
+            ),
+        )
+        robot: ArticulationCfg = robot_cfg.replace(prim_path="{ENV_REGEX_NS}/Robot")
+
+    return ReplayMotionSceneCfg
 
 
 class MotionLoader:
@@ -186,10 +178,10 @@ class MotionLoader:
             slerped_quats[i] = quat_slerp(a[i], b[i], blend[i])
         return slerped_quats
 
-    def _compute_frame_blend(self, times: torch.Tensor) -> torch.Tensor:
+    def _compute_frame_blend(self, times: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         phase = times / self.duration
         index_0 = (phase * (self.input_frames - 1)).floor().long()
-        index_1 = torch.minimum(index_0 + 1, torch.tensor(self.input_frames - 1, device=self.device))
+        index_1 = torch.clamp(index_0 + 1, max=self.input_frames - 1)
         blend = phase * (self.input_frames - 1) - index_0
         return index_0, index_1, blend
 
@@ -223,15 +215,6 @@ class MotionLoader:
             reset_flag = True
         return state, reset_flag
 
-
-def _build_scene_cfg(robot_cfg: ArticulationCfg) -> type[InteractiveSceneCfg]:
-    @configclass
-    class SceneCfg(ReplayMotionSceneCfg):
-        robot: ArticulationCfg = robot_cfg.replace(prim_path="{ENV_REGEX_NS}/Robot")
-
-    return SceneCfg
-
-
 def run_simulator(
     sim: SimulationContext,
     scene: InteractiveScene,
@@ -249,17 +232,18 @@ def run_simulator(
 
     log = {
         "fps": [args_cli.output_fps],
+
         "robot_name": [robot_name],
         "joint_names": np.array(robot.joint_names),
         "body_names": np.array(robot.body_names),
+        "root_link_name": [root_link_name],
+
         "joint_pos": [],
         "joint_vel": [],
         "body_pos_w": [],
         "body_quat_w": [],
         "body_lin_vel_w": [],
-        "body_ang_vel_w": [],
-        "source_joint_names": np.array(csv_joint_names),
-        "root_link_name": [root_link_name],
+        "body_ang_vel_w": [], 
     }
     file_saved = False
 
@@ -318,11 +302,8 @@ def main():
     motion_cfg = config["motion_data"]
 
     robot_name = str(motion_cfg["robot_name"])
-    if robot_name not in ROBOT_ASSET_REGISTRY:
-        raise KeyError(f"Unknown robot_name '{robot_name}'. Available: {list(ROBOT_ASSET_REGISTRY)}")
-
-    csv_path = _resolve_path(config_path.parent, args_cli.input_file or motion_cfg["csv_path"])
-    input_fps = int(args_cli.input_fps or motion_cfg.get("csv_fps", 30))
+    csv_path = _resolve_path(config_path.parent, motion_cfg["csv_path"])
+    input_fps = int(motion_cfg.get("csv_fps", 30))
     root_quat_order = str(motion_cfg.get("root_quat_order", "xyzw"))
     root_link_name = str(motion_cfg["root_link_name"])
     csv_joint_names = list(motion_cfg["csv_joint_names"])
@@ -331,7 +312,7 @@ def main():
     sim_cfg.dt = 1.0 / args_cli.output_fps
     sim = SimulationContext(sim_cfg)
 
-    scene_cfg = _build_scene_cfg(ROBOT_ASSET_REGISTRY[robot_name])
+    scene_cfg = _build_scene_cfg(_get_robot_asset_cfg(robot_name))
     scene = InteractiveScene(scene_cfg(num_envs=1, env_spacing=2.0))
 
     sim.reset()
@@ -345,6 +326,7 @@ def main():
         frame_range=tuple(args_cli.frame_range) if args_cli.frame_range is not None else None,
         root_quat_order=root_quat_order,
     )
+    
     run_simulator(sim, scene, motion, csv_joint_names, args_cli.output_name, root_link_name, robot_name)
 
 
