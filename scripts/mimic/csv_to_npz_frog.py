@@ -25,6 +25,12 @@ from isaaclab.app import AppLauncher
 parser = argparse.ArgumentParser(description="Replay motion from csv file and output to npz file.")
 parser.add_argument("--config", type=str, default="motion_data/config/g1.yaml", help="Motion config yaml.")
 parser.add_argument(
+    "--csv_path",
+    type=str,
+    default=None,
+    help="Optional override for motion_data.csv_path. Used by the batch converter.",
+)
+parser.add_argument(
     "--frame_range",
     nargs=2,
     type=int,
@@ -302,7 +308,12 @@ def main():
     motion_cfg = config["motion_data"]
 
     robot_name = str(motion_cfg["robot_name"])
-    csv_path = _resolve_path(config_path.parent, motion_cfg["csv_path"])
+    csv_path_value = args_cli.csv_path if args_cli.csv_path is not None else motion_cfg["csv_path"]
+    if not isinstance(csv_path_value, str):
+        raise TypeError(
+            "csv_path must be a string. For multiple paths, use scripts/mimic/batch_csv_to_npz_frog.py."
+        )
+    csv_path = _resolve_path(config_path.parent, csv_path_value)
     input_fps = int(motion_cfg.get("csv_fps", 30))
     root_quat_order = str(motion_cfg.get("root_quat_order", "xyzw"))
     root_link_name = str(motion_cfg["root_link_name"])
