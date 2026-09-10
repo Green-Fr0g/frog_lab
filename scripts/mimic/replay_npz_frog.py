@@ -30,7 +30,7 @@ from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 
 from frog_lab.assets.g1_23dof import G1_23DOF_CFG
-from frog_lab.assets.g1_29dof import G1_29DOF_CFG
+from frog_lab.assets.g1 import G1_CFG
 from frog_lab.assets.g1_mimic import G1_CYLINDER_CFG
 from frog_lab.tasks.mimic.mdp import MotionLoader
 
@@ -40,7 +40,7 @@ def _get_robot_asset_cfg(robot_name: str) -> ArticulationCfg:
         return G1_CYLINDER_CFG
     if robot_name == "g1_23":
         return G1_23DOF_CFG
-    raise KeyError(f"Unknown robot_name '{robot_name}'. Supported: g1, g1_23dof, g1_29dof")
+    raise KeyError(f"Unknown robot_name '{robot_name}'. Supported: g1, g1_23")
 
 
 def _load_motion_meta(motion_file: str) -> tuple[str, str, list[str], int]:

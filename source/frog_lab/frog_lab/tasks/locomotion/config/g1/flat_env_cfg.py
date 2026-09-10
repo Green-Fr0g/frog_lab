@@ -1,13 +1,13 @@
-"""Flat-terrain velocity locomotion configuration for Unitree G1 29-DOF."""
+"""Flat-terrain velocity locomotion configuration for Unitree G1."""
 
 from isaaclab.utils import configclass
 
-from .rough_env_cfg import G1_29DOFRoughEnvCfg
+from .rough_env_cfg import G1RoughEnvCfg
 
 
 @configclass
-class G1_29DOFFlatEnvCfg(G1_29DOFRoughEnvCfg):
-    """G1 29-DOF velocity locomotion on flat terrain."""
+class G1FlatEnvCfg(G1RoughEnvCfg):
+    """G1 velocity locomotion on flat terrain."""
 
     def __post_init__(self):
         super().__post_init__()
@@ -35,5 +35,5 @@ class G1_29DOFFlatEnvCfg(G1_29DOFRoughEnvCfg):
         #task_Rewards
         self.rewards.track_ang_vel_z_exp.weight = 1.0
 
-        if self.__class__.__name__ == "G1_29DOFFlatEnvCfg":
+        if self.__class__.__name__ == "G1FlatEnvCfg":
             self.disable_zero_weight_rewards()

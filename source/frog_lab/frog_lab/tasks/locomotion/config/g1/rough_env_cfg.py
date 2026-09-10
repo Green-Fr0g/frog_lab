@@ -1,15 +1,15 @@
-"""Rough-terrain velocity locomotion configuration for Unitree G1 29-DOF."""
+"""Rough-terrain velocity locomotion configuration for Unitree G1."""
 
 from isaaclab.utils import configclass
 
 import frog_lab.tasks.locomotion.mdp as mdp
-from frog_lab.assets.g1_29dof import G1_29DOF_CFG
+from frog_lab.assets.g1 import G1_CFG
 from frog_lab.tasks.locomotion.locomotion_env_cfg import LocomotionVelocityRoughEnvCfg
 
 
 @configclass
-class G1_29DOFRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
-    """G1 29-DOF velocity locomotion on rough terrain."""
+class G1RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
+    """G1 velocity locomotion on rough terrain."""
 
     base_link_name = "torso_link"
     foot_link_name = ".*_ankle_roll_link"
@@ -50,7 +50,7 @@ class G1_29DOFRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         super().__post_init__()
 
         # Scene
-        self.scene.robot = G1_29DOF_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+        self.scene.robot = G1_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
         self.scene.height_scanner.prim_path = "{ENV_REGEX_NS}/Robot/" + self.base_link_name
         self.scene.height_scanner_base.prim_path = "{ENV_REGEX_NS}/Robot/" + self.base_link_name
 
@@ -140,7 +140,7 @@ class G1_29DOFRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.rewards.track_lin_vel_xy_exp.weight = 3.0
         self.rewards.track_ang_vel_z_exp.weight = 3.0
 
-        if self.__class__.__name__ == "G1_29DOFRoughEnvCfg":
+        if self.__class__.__name__ == "G1RoughEnvCfg":
             self.disable_zero_weight_rewards()
 
         # Terminations

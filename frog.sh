@@ -17,8 +17,8 @@ usage() {
   PYTHON      覆盖默认 Python 解释器
 
 示例:
-  ./frog.sh -t --task FrogLab-Isaac-AMP-Flat-Unitree-G1-29DOF-v0 --headless
-  ./frog.sh -p --task FrogLab-Isaac-AMP-Flat-Unitree-G1-29DOF-v0 --checkpoint /path/to/model.pt
+  ./frog.sh -t --task FrogLab-Isaac-AMP-Flat-Unitree-G1-v0 --headless
+  ./frog.sh -p --task FrogLab-Isaac-AMP-Flat-Unitree-G1-v0 --checkpoint /path/to/model.pt
 EOF
 }
 

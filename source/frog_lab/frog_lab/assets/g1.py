@@ -1,19 +1,19 @@
-"""Configuration for the Unitree G1 29-DOF humanoid."""
+"""Configuration for the Unitree G1 humanoid."""
 
 import isaaclab.sim as sim_utils
 from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets import ArticulationCfg
 from frog_lab.assets import FROG_LAB_DATA_DIR
 
-G1_29DOF_URDF_PATH = f"{FROG_LAB_DATA_DIR}/g1/urdf/g1_29dof_rev_1_0.urdf"
+G1_URDF_PATH = f"{FROG_LAB_DATA_DIR}/g1/urdf/g1_29dof_rev_1_0.urdf"
 
 
-G1_29DOF_CFG = ArticulationCfg(
+G1_CFG = ArticulationCfg(
     spawn=sim_utils.UrdfFileCfg(
         fix_base=False,
         merge_fixed_joints=True,
         replace_cylinders_with_capsules=True,
-        asset_path=str(G1_29DOF_URDF_PATH),
+        asset_path=str(G1_URDF_PATH),
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,

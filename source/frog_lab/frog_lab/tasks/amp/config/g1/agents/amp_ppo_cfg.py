@@ -4,20 +4,20 @@ from isaaclab.utils import configclass
 from isaaclab_rl.rsl_rl import RslRlPpoActorCriticCfg
 
 from frog_lab.rl_cfg.amp_cfg import AmpCfg, RslRlAmpAlgorithmCfg, RslRlAmpRunnerCfg
-from frog_lab.tasks.amp.config.g1_29dof.flat_env_cfg import G1_29DOFAmpFlatEnvCfg
+from frog_lab.tasks.amp.config.g1.flat_env_cfg import G1AmpFlatEnvCfg
 
 
 @configclass
-class G1_29DOFAmpAlgorithmCfg(RslRlAmpAlgorithmCfg):
+class G1AmpAlgorithmCfg(RslRlAmpAlgorithmCfg):
     pass
 
 
 @configclass
-class G1_29DOFAmpFlatRunnerCfg(RslRlAmpRunnerCfg):
+class G1AmpFlatRunnerCfg(RslRlAmpRunnerCfg):
     num_steps_per_env = 24
     max_iterations = 5000
     save_interval = 50
-    experiment_name = "g1_29dof_amp_flat"
+    experiment_name = "g1_amp_flat"
 
     policy: RslRlPpoActorCriticCfg = RslRlPpoActorCriticCfg(
         init_noise_std=1.0,
@@ -28,7 +28,7 @@ class G1_29DOFAmpFlatRunnerCfg(RslRlAmpRunnerCfg):
         activation="elu",
     )
     
-    algorithm: G1_29DOFAmpAlgorithmCfg = G1_29DOFAmpAlgorithmCfg(
+    algorithm: G1AmpAlgorithmCfg = G1AmpAlgorithmCfg(
         value_loss_coef=1.0,
         use_clipped_value_loss=True,
         clip_param=0.2,
@@ -55,10 +55,10 @@ class G1_29DOFAmpFlatRunnerCfg(RslRlAmpRunnerCfg):
             amp_state_key="amp_state",
             motion_loader_class_name="frog_lab.tasks.amp.utils.motion_loader:AMPBodyStateMotionLoader",
             motion_loader_kwargs={
-                "motion_files": G1_29DOFAmpFlatEnvCfg().motion_dir,
-                "body_names": tuple(G1_29DOFAmpFlatEnvCfg().amp_body_names),
-                "anchor_name": G1_29DOFAmpFlatEnvCfg().anchor_body_name,
-                "all_body_names": tuple(G1_29DOFAmpFlatEnvCfg().amp_all_body_names),
+                "motion_files": G1AmpFlatEnvCfg().motion_dir,
+                "body_names": tuple(G1AmpFlatEnvCfg().amp_body_names),
+                "anchor_name": G1AmpFlatEnvCfg().anchor_body_name,
+                "all_body_names": tuple(G1AmpFlatEnvCfg().amp_all_body_names),
                 "quat_order": "wxyz",
             },
         ),

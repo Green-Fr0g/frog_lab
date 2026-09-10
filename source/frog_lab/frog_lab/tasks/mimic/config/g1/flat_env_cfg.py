@@ -4,12 +4,12 @@ from isaaclab.utils import configclass
 
 from frog_lab.assets.g1_mimic import G1_ACTION_SCALE, G1_CYLINDER_CFG
 from frog_lab.tasks.mimic import MIMIC_DIR
-from frog_lab.tasks.mimic.config.g1_29dof.agents.rsl_rl_ppo_cfg import LOW_FREQ_SCALE
+from frog_lab.tasks.mimic.config.g1.agents.rsl_rl_ppo_cfg import LOW_FREQ_SCALE
 from frog_lab.tasks.mimic.tracking_env_cfg import TrackingEnvCfg
 
 
 @configclass
-class G1_29DOFFlatEnvCfg(TrackingEnvCfg):
+class G1FlatEnvCfg(TrackingEnvCfg):
 
     joint_names = [
         "left_hip_pitch_joint",
@@ -76,7 +76,7 @@ class G1_29DOFFlatEnvCfg(TrackingEnvCfg):
     ]
 
     anchor_body_name = "torso_link"
-    motion_file = os.path.join(MIMIC_DIR, "config", "g1_29dof", "motions", "G1_gangnam_style_V01.npz")
+    motion_file = os.path.join(MIMIC_DIR, "config", "g1", "motions", "G1_gangnam_style_V01.npz")
 
     def __post_init__(self):
         super().__post_init__()
@@ -154,7 +154,7 @@ class G1_29DOFFlatEnvCfg(TrackingEnvCfg):
 
 
 @configclass
-class G1_29DOFFlatWoStateEstimationEnvCfg(G1_29DOFFlatEnvCfg):
+class G1FlatWoStateEstimationEnvCfg(G1FlatEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         self.observations.policy.motion_anchor_pos_b = None
@@ -162,7 +162,7 @@ class G1_29DOFFlatWoStateEstimationEnvCfg(G1_29DOFFlatEnvCfg):
 
 
 @configclass
-class G1_29DOFFlatLowFreqEnvCfg(G1_29DOFFlatEnvCfg):
+class G1FlatLowFreqEnvCfg(G1FlatEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         self.decimation = round(self.decimation / LOW_FREQ_SCALE)

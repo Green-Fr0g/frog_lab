@@ -1,15 +1,15 @@
-"""RSL-RL PPO configurations for Unitree G1 29-DOF locomotion."""
+"""RSL-RL PPO configurations for Unitree G1 locomotion."""
 
 from isaaclab.utils import configclass
 from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, RslRlPpoAlgorithmCfg
 
 
 @configclass
-class G1_29DOFRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
+class G1RoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
     max_iterations = 5000
     save_interval = 50
-    experiment_name = "g1_29dof_rough"
+    experiment_name = "g1_rough"
     policy = RslRlPpoActorCriticCfg(
         init_noise_std=1.0,
         actor_obs_normalization=False,
@@ -35,8 +35,8 @@ class G1_29DOFRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 
 
 @configclass
-class G1_29DOFFlatPPORunnerCfg(G1_29DOFRoughPPORunnerCfg):
+class G1FlatPPORunnerCfg(G1RoughPPORunnerCfg):
     def __post_init__(self):
         super().__post_init__()
         self.max_iterations = 5000
-        self.experiment_name = "g1_29dof_flat"
+        self.experiment_name = "g1_flat"

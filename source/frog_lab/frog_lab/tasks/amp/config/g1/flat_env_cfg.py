@@ -10,14 +10,14 @@ from frog_lab.tasks.amp.amp_env_cfg import AmpFlatEnvCfg
 
 
 @configclass
-class G1_29DOFAmpFlatEnvCfg(AmpFlatEnvCfg):
-    """G1 29-DOF velocity-conditioned AMP on flat terrain."""
+class G1AmpFlatEnvCfg(AmpFlatEnvCfg):
+    """G1 velocity-conditioned AMP on flat terrain."""
 
     base_link_name = "torso_link"
     root_link_name = "pelvis"
     foot_link_name = ".*_ankle_roll_link"
     anchor_body_name = "torso_link"
-    motion_dir = os.path.join(AMP_DIR, "config", "g1_29dof", "motions", "WalkandRun")
+    motion_dir = os.path.join(AMP_DIR, "config", "g1", "motions", "WalkandRun")
 
     link_names = [
         "left_hip_pitch_link",

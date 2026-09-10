@@ -56,13 +56,13 @@ python scripts/list_envs.py --keyword WASABI
 
 ```bash
 python scripts/frog_rl/train.py \
-  --task FrogLab-Isaac-Velocity-Rough-Unitree-G1-29DOF-v0
+  --task FrogLab-Isaac-Velocity-Rough-Unitree-G1-v0
 
 python scripts/frog_rl/train.py \
-  --task FrogLab-Isaac-Mimic-Flat-Unitree-G1-29DOF-v0 --headless
+  --task FrogLab-Isaac-Mimic-Flat-Unitree-G1-v0 --headless
 
 python scripts/frog_rl/train.py \
-  --task FrogLab-Isaac-AMP-Flat-Unitree-G1-29DOF-v0
+  --task FrogLab-Isaac-AMP-Flat-Unitree-G1-v0
 ```
 
 `scripts/rsl_rl/train.py` 仍可用于原生 RSL-RL，读取 `rsl_rl_cfg_entry_point`。
@@ -75,13 +75,13 @@ AMP/WASABI 同样走 `frog_rl` 训练入口，runner 配置指向 `AMPPPO` / `Wa
 
 ```bash
 python scripts/frog_rl/train.py \
-  --task FrogLab-Isaac-AMP-Flat-Unitree-G1-29DOF-v0
+  --task FrogLab-Isaac-AMP-Flat-Unitree-G1-v0
 ```
 
 AMP 配置位于：
 
-- 环境：`source/frog_lab/frog_lab/tasks/amp/config/g1_29dof/flat_env_cfg.py`
-- Agent：`source/frog_lab/frog_lab/tasks/amp/config/g1_29dof/agents/amp_ppo_cfg.py`
+- 环境：`source/frog_lab/frog_lab/tasks/amp/config/g1/flat_env_cfg.py`
+- Agent：`source/frog_lab/frog_lab/tasks/amp/config/g1/agents/amp_ppo_cfg.py`
 
 AMP 任务使用 `AMPPPO`、运动专家数据和 `amp_state` 观察组训练判别器。
 
@@ -89,13 +89,13 @@ AMP 任务使用 `AMPPPO`、运动专家数据和 `amp_state` 观察组训练判
 
 ```bash
 python scripts/frog_rl/train.py \
-  --task FrogLab-Isaac-WASABI-Flat-Unitree-G1-29DOF-v0
+  --task FrogLab-Isaac-WASABI-Flat-Unitree-G1-v0
 ```
 
 WASABI 配置位于：
 
-- 环境：`source/frog_lab/frog_lab/tasks/amp/config/g1_29dof/wasabi_flat_env_cfg.py`
-- Agent：`source/frog_lab/frog_lab/tasks/amp/config/g1_29dof/agents/wasabi_ppo_cfg.py`
+- 环境：`source/frog_lab/frog_lab/tasks/amp/config/g1/wasabi_flat_env_cfg.py`
+- Agent：`source/frog_lab/frog_lab/tasks/amp/config/g1/agents/wasabi_ppo_cfg.py`
 
 WASABI 使用 `WasabiPPO`，并以 `wasabi_policy` 和 `wasabi_reference` 观察组构造判别器输入。
 
@@ -103,7 +103,7 @@ WASABI 使用 `WasabiPPO`，并以 `wasabi_policy` 和 `wasabi_reference` 观察
 
 ```bash
 python scripts/frog_rl/train.py \
-  --task FrogLab-Isaac-AMP-Flat-Unitree-G1-29DOF-v0 \
+  --task FrogLab-Isaac-AMP-Flat-Unitree-G1-v0 \
   --num_envs 1024 \
   --max_iterations 5000 \
   --seed 42
@@ -127,7 +127,7 @@ logs/frog_rl/<experiment_name>/<时间戳>/
 
 ```bash
 python scripts/frog_rl/play.py \
-  --task FrogLab-Isaac-AMP-Flat-Unitree-G1-29DOF-v0 \
+  --task FrogLab-Isaac-AMP-Flat-Unitree-G1-v0 \
   --checkpoint /绝对路径/model_5000.pt \
   --num_envs 1
 ```
@@ -142,7 +142,7 @@ python scripts/frog_rl/play.py \
 G1 29 自由度 AMP/WASABI motion 数据位于：
 
 ```text
-source/frog_lab/frog_lab/tasks/amp/config/g1_29dof/motions/
+source/frog_lab/frog_lab/tasks/amp/config/g1/motions/
 ```
 
 每个 `.npz` 文件应包含 `body_pos_w`、`body_quat_w`、`body_lin_vel_w`、`body_ang_vel_w`、`joint_pos`、`joint_vel` 和 `fps`。当前 G1 数据约定为 30 个刚体和 29 个关节。

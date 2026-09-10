@@ -6,16 +6,16 @@ from isaaclab_rl.rsl_rl import RslRlPpoActorCriticCfg
 from frog_lab.rl_cfg.wasabi_cfg import RslRlWasabiAlgorithmCfg, RslRlWasabiRunnerCfg, WasabiCfg
 
 @configclass
-class G1_29DOFWasabiAlgorithmCfg(RslRlWasabiAlgorithmCfg):
+class G1WasabiAlgorithmCfg(RslRlWasabiAlgorithmCfg):
     pass
 
 
 @configclass
-class G1_29DOFWasabiRunnerCfg(RslRlWasabiRunnerCfg):
+class G1WasabiRunnerCfg(RslRlWasabiRunnerCfg):
     num_steps_per_env = 24
     max_iterations = 5000
     save_interval = 50
-    experiment_name = "g1_29dof_wasabi_flat"
+    experiment_name = "g1_wasabi_flat"
 
     policy: RslRlPpoActorCriticCfg = RslRlPpoActorCriticCfg(
         init_noise_std=1.0,
@@ -25,7 +25,7 @@ class G1_29DOFWasabiRunnerCfg(RslRlWasabiRunnerCfg):
         critic_hidden_dims=[512, 256, 128],
         activation="elu",
     )
-    algorithm: G1_29DOFWasabiAlgorithmCfg = G1_29DOFWasabiAlgorithmCfg(
+    algorithm: G1WasabiAlgorithmCfg = G1WasabiAlgorithmCfg(
         value_loss_coef=1.0,
         use_clipped_value_loss=True,
         clip_param=0.2,

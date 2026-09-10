@@ -21,14 +21,14 @@ DAMPING_7520_14 = 2.0 * DAMPING_RATIO * ARMATURE_7520_14 * NATURAL_FREQ
 DAMPING_7520_22 = 2.0 * DAMPING_RATIO * ARMATURE_7520_22 * NATURAL_FREQ
 DAMPING_4010 = 2.0 * DAMPING_RATIO * ARMATURE_4010 * NATURAL_FREQ
 
-G1_29DOF_URDF_PATH = f"{FROG_LAB_DATA_DIR}/g1/urdf/g1_29dof_rev_1_0.urdf"
+G1_URDF_PATH = f"{FROG_LAB_DATA_DIR}/g1/urdf/g1_29dof_rev_1_0.urdf"
 
 G1_CYLINDER_CFG = ArticulationCfg(
     spawn=sim_utils.UrdfFileCfg(
         fix_base=False,
         merge_fixed_joints=True,
         replace_cylinders_with_capsules=True,
-        asset_path=str(G1_29DOF_URDF_PATH),
+        asset_path=str(G1_URDF_PATH),
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,

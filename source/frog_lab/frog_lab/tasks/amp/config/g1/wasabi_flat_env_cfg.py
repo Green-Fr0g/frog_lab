@@ -10,14 +10,14 @@ from frog_lab.tasks.amp.wasabi_env_cfg import WasabiFlatEnvCfg
 
 
 @configclass
-class G1_29DOFWasabiFlatEnvCfg(WasabiFlatEnvCfg):
-    """G1 29-DOF flat WASABI task."""
+class G1WasabiFlatEnvCfg(WasabiFlatEnvCfg):
+    """G1 flat WASABI task."""
 
     base_link_name = "torso_link"
     root_link_name = "pelvis"
     foot_link_name = ".*_ankle_roll_link"
     anchor_body_name = "torso_link"
-    motion_dir = os.path.join(AMP_DIR, "config", "g1_29dof", "motions")
+    motion_dir = os.path.join(AMP_DIR, "config", "g1", "motions")
 
     joint_names = [
         "left_hip_pitch_joint", "left_hip_roll_joint", "left_hip_yaw_joint", "left_knee_joint",
