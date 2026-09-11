@@ -75,8 +75,13 @@ class MotionLoader:
             device=device,
         )
 
-        self.joint_names = _as_str_list(data["joint_names"]) if "joint_names" in data else None
-        if self.joint_names is not None and len(self.joint_names) != self.joint_pos.shape[1]:
+        if "joint_names" not in data:
+            raise KeyError(
+                f"Motion file '{motion_file}' is missing 'joint_names'. "
+                "Re-export the motion with scripts/mimic/csv_to_npz.py."
+            )
+        self.joint_names = _as_str_list(data["joint_names"])
+        if len(self.joint_names) != self.joint_pos.shape[1]:
             raise ValueError(
                 f"Motion file '{motion_file}' has {len(self.joint_names)} joint_names "
                 f"but joint_pos has {self.joint_pos.shape[1]} joints."
@@ -140,9 +145,7 @@ class MotionCommand(CommandTerm):
         self.metrics["sampling_top1_bin"] = torch.zeros(self.num_envs, device=self.device)
 
     def _align_motion_joints_to_robot(self):
-        """Reorder motion joints to the live robot joint order when names are available."""
-        if self.motion.joint_names is None:
-            return
+        """Reorder motion joints to the live robot joint order."""
         joint_indexes = torch.tensor(
             _index_by_names(self.motion.joint_names, list(self.robot.joint_names), "joint"),
             dtype=torch.long,

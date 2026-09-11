@@ -161,34 +161,38 @@ class WasabiMotionReference:
         joint_pos = torch.as_tensor(data["joint_pos"], dtype=torch.float32, device=self.device)
         joint_vel = torch.as_tensor(data["joint_vel"], dtype=torch.float32, device=self.device)
 
-        if "body_names" in data:
-            motion_body_names = _as_str_list(data["body_names"])
-            if len(motion_body_names) != body_pos_w.shape[1]:
-                raise ValueError(
-                    f"WASABI motion '{path}' has {len(motion_body_names)} body_names "
-                    f"but body_pos_w has {body_pos_w.shape[1]} bodies."
-                )
-            body_indexes = _index_by_names(motion_body_names, self.all_body_names, "body")
-            body_pos_w = body_pos_w[:, body_indexes]
-            body_quat_w = body_quat_w[:, body_indexes]
-            body_lin_vel_w = body_lin_vel_w[:, body_indexes]
-            body_ang_vel_w = body_ang_vel_w[:, body_indexes]
-
-        if "joint_names" in data:
-            motion_joint_names = _as_str_list(data["joint_names"])
-            if len(motion_joint_names) != joint_pos.shape[1]:
-                raise ValueError(
-                    f"WASABI motion '{path}' has {len(motion_joint_names)} joint_names "
-                    f"but joint_pos has {joint_pos.shape[1]} joints."
-                )
-            joint_indexes = _index_by_names(motion_joint_names, self.joint_names, "joint")
-            joint_pos = joint_pos[:, joint_indexes]
-            joint_vel = joint_vel[:, joint_indexes]
-        elif joint_pos.ndim != 2 or joint_pos.shape[1] != len(self.joint_names):
-            raise ValueError(
-                f"WASABI motion '{path}' has joint shape {tuple(joint_pos.shape)}; expected "
-                f"(frames, {len(self.joint_names)})."
+        if "body_names" not in data:
+            raise KeyError(
+                f"WASABI motion '{path}' is missing 'body_names'. "
+                "Re-export the motion with scripts/mimic/csv_to_npz.py."
             )
+        if "joint_names" not in data:
+            raise KeyError(
+                f"WASABI motion '{path}' is missing 'joint_names'. "
+                "Re-export the motion with scripts/mimic/csv_to_npz.py."
+            )
+
+        motion_body_names = _as_str_list(data["body_names"])
+        if len(motion_body_names) != body_pos_w.shape[1]:
+            raise ValueError(
+                f"WASABI motion '{path}' has {len(motion_body_names)} body_names "
+                f"but body_pos_w has {body_pos_w.shape[1]} bodies."
+            )
+        body_indexes = _index_by_names(motion_body_names, self.all_body_names, "body")
+        body_pos_w = body_pos_w[:, body_indexes]
+        body_quat_w = body_quat_w[:, body_indexes]
+        body_lin_vel_w = body_lin_vel_w[:, body_indexes]
+        body_ang_vel_w = body_ang_vel_w[:, body_indexes]
+
+        motion_joint_names = _as_str_list(data["joint_names"])
+        if len(motion_joint_names) != joint_pos.shape[1]:
+            raise ValueError(
+                f"WASABI motion '{path}' has {len(motion_joint_names)} joint_names "
+                f"but joint_pos has {joint_pos.shape[1]} joints."
+            )
+        joint_indexes = _index_by_names(motion_joint_names, self.joint_names, "joint")
+        joint_pos = joint_pos[:, joint_indexes]
+        joint_vel = joint_vel[:, joint_indexes]
 
         num_frames = joint_pos.shape[0]
         if body_pos_w.shape[0] != num_frames or body_pos_w.shape[1] != len(self.all_body_names):

@@ -46,8 +46,14 @@ def _get_robot_asset_cfg(robot_name: str) -> ArticulationCfg:
 def _load_motion_meta(motion_file: str) -> tuple[str, str, list[str], int]:
     data = np.load(motion_file, allow_pickle=True)
     try:
-        robot_name = str(data["robot_name"][0]) if "robot_name" in data else "g1"
-        root_link_name = str(data["root_link_name"][0]) if "root_link_name" in data else "pelvis"
+        for key in ("robot_name", "root_link_name", "body_names", "joint_names"):
+            if key not in data:
+                raise KeyError(
+                    f"Motion file '{motion_file}' is missing '{key}'. "
+                    "Re-export the motion with scripts/mimic/csv_to_npz_frog.py."
+                )
+        robot_name = str(data["robot_name"][0])
+        root_link_name = str(data["root_link_name"][0])
         body_names = list(np.asarray(data["body_names"]).tolist())
         fps = int(np.asarray(data["fps"]).reshape(-1)[0]) if "fps" in data else 50
         return robot_name, root_link_name, body_names, fps

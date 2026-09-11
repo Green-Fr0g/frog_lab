@@ -35,7 +35,7 @@ class _MotionClip:
     root_ang_vel: torch.Tensor
     joint_pos: torch.Tensor
     joint_vel: torch.Tensor
-    joint_names: tuple[str, ...] | None
+    joint_names: tuple[str, ...]
 
     @property
     def num_frames(self) -> int:
@@ -88,26 +88,31 @@ class MotionResetManager:
             joint_pos = torch.as_tensor(data["joint_pos"], dtype=torch.float32, device=device)
             joint_vel = torch.as_tensor(data["joint_vel"], dtype=torch.float32, device=device)
 
-            if "body_names" in data:
-                motion_body_names = _as_str_list(data["body_names"])
-                if len(motion_body_names) != body_pos_w.shape[1]:
-                    raise ValueError(
-                        f"AMP motion file '{file}' has {len(motion_body_names)} body_names "
-                        f"but body_pos_w has {body_pos_w.shape[1]} bodies."
-                    )
-                body_indexes = _index_by_names(motion_body_names, all_body_names, "body")
-                body_pos_w = body_pos_w[:, body_indexes]
-                body_quat_w = body_quat_w[:, body_indexes]
-                body_lin_vel_w = body_lin_vel_w[:, body_indexes]
-                body_ang_vel_w = body_ang_vel_w[:, body_indexes]
-            elif body_pos_w.shape[1] != len(all_body_names):
-                raise ValueError(
-                    f"AMP motion file '{file}' has {body_pos_w.shape[1]} bodies; "
-                    f"expected {len(all_body_names)}."
+            if "body_names" not in data:
+                raise KeyError(
+                    f"AMP motion file '{file}' is missing 'body_names'. "
+                    "Re-export the motion with scripts/mimic/csv_to_npz.py."
+                )
+            if "joint_names" not in data:
+                raise KeyError(
+                    f"AMP motion file '{file}' is missing 'joint_names'. "
+                    "Re-export the motion with scripts/mimic/csv_to_npz.py."
                 )
 
-            joint_names = _as_str_list(data["joint_names"]) if "joint_names" in data else None
-            if joint_names is not None and len(joint_names) != joint_pos.shape[1]:
+            motion_body_names = _as_str_list(data["body_names"])
+            if len(motion_body_names) != body_pos_w.shape[1]:
+                raise ValueError(
+                    f"AMP motion file '{file}' has {len(motion_body_names)} body_names "
+                    f"but body_pos_w has {body_pos_w.shape[1]} bodies."
+                )
+            body_indexes = _index_by_names(motion_body_names, all_body_names, "body")
+            body_pos_w = body_pos_w[:, body_indexes]
+            body_quat_w = body_quat_w[:, body_indexes]
+            body_lin_vel_w = body_lin_vel_w[:, body_indexes]
+            body_ang_vel_w = body_ang_vel_w[:, body_indexes]
+
+            joint_names = _as_str_list(data["joint_names"])
+            if len(joint_names) != joint_pos.shape[1]:
                 raise ValueError(
                     f"AMP motion file '{file}' has {len(joint_names)} joint_names "
                     f"but joint_pos has {joint_pos.shape[1]} joints."
@@ -121,7 +126,7 @@ class MotionResetManager:
                     root_ang_vel=body_ang_vel_w[:, root_index, :],
                     joint_pos=joint_pos,
                     joint_vel=joint_vel,
-                    joint_names=tuple(joint_names) if joint_names is not None else None,
+                    joint_names=tuple(joint_names),
                 )
             )
 
@@ -146,7 +151,7 @@ class MotionResetManager:
         if len(env_ids) == 0:
             return
 
-        clips = self._frames[cache_key]joint_names
+        clips = self._frames[cache_key]
         clip_ids = torch.randint(0, len(clips), (len(env_ids),), device=env.device)
         frame_ids = torch.zeros_like(clip_ids)
         for clip_id in clip_ids.unique().tolist():
@@ -176,17 +181,9 @@ class MotionResetManager:
 
             clip_joint_pos = clip.joint_pos[clip_frame_ids]
             clip_joint_vel = clip.joint_vel[clip_frame_ids]
-            if clip.joint_names is not None:
-                joint_indexes = _index_by_names(clip.joint_names, asset_joint_names, "joint")
-                clip_joint_pos = clip_joint_pos[:, joint_indexes]
-                clip_joint_vel = clip_joint_vel[:, joint_indexes]
-            elif clip_joint_pos.shape[1] != len(asset_joint_names):
-                raise ValueError(
-                    f"AMP motion joint shape {tuple(clip_joint_pos.shape)} does not match robot joint count "
-                    f"{len(asset_joint_names)}."
-                )
-            joint_pos[selected] = clip_joint_pos
-            joint_vel[selected] = clip_joint_vel
+            joint_indexes = _index_by_names(clip.joint_names, asset_joint_names, "joint")
+            joint_pos[selected] = clip_joint_pos[:, joint_indexes]
+            joint_vel[selected] = clip_joint_vel[:, joint_indexes]
 
         root_pos = root_pos.clone()
         root_pos[:, :2] += env.scene.env_origins[env_ids, :2]
