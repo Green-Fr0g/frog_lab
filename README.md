@@ -137,6 +137,20 @@ python scripts/frog_rl/play.py \
 - `policy.pt`：TorchScript 策略
 - `policy.onnx`：ONNX 策略
 
+### 部署参数导出（deploy.yaml）
+
+训练启动时，`scripts/frog_rl/train.py` 会自动调用
+`frog_lab/utils/export_deploy_cfg.py`，在本次 run 的 `params/deploy.yaml`
+中导出真机部署所需的全部环境侧参数，与 `policy.onnx` 配套构成完整部署包：
+
+- `joint_ids_map`：实际使用的关节名列表（即策略动作序，无 SDK 重映射）
+- `step_dt`：控制周期（sim.dt × decimation）
+- `stiffness` / `damping` / `default_joint_pos`：按关节序导出的执行器增益与默认关节角
+- `commands`：`base_velocity` 指令范围（无该指令的任务自动跳过）
+- `actions` / `observations`：逐 term 的 scale、clip、offset、joint_ids、history_length
+
+只导出 `policy` 观测组；critic/特权观测不导出。
+
 ## 运动数据
 
 G1 29 自由度 AMP/WASABI motion 数据位于：

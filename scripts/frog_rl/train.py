@@ -51,6 +51,7 @@ from isaaclab_tasks.utils.hydra import hydra_task_config
 
 import isaaclab_tasks  # noqa: F401
 import frog_lab.tasks  # noqa: F401
+from frog_lab.utils.export_deploy_cfg import export_deploy_cfg
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +108,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     dump_yaml(os.path.join(log_dir, "params", "env.yaml"), env_cfg)
     dump_yaml(os.path.join(log_dir, "params", "agent.yaml"), agent_cfg)
+    if isinstance(env.unwrapped, ManagerBasedRLEnv):
+        export_deploy_cfg(env.unwrapped, log_dir)
     start_time = time.time()
     runner.learn(num_learning_iterations=agent_cfg.max_iterations, init_at_random_ep_len=True)
     logger.info("Training time: %.2f seconds", time.time() - start_time)
