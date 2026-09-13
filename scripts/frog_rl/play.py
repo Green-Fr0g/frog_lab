@@ -46,7 +46,7 @@ from isaaclab_rl.rsl_rl import RslRlBaseRunnerCfg, RslRlVecEnvWrapper
 from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
-from camera_follow import CameraFollower
+from utils.camera_follow import CameraFollower
 
 import isaaclab_tasks  # noqa: F401
 import frog_lab.tasks  # noqa: F401

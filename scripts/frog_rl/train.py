@@ -51,7 +51,7 @@ from isaaclab_tasks.utils.hydra import hydra_task_config
 
 import isaaclab_tasks  # noqa: F401
 import frog_lab.tasks  # noqa: F401
-from frog_lab.utils.export_deploy_cfg import export_deploy_cfg
+from utils.export_deploy_cfg import export_deploy_cfg
 
 logger = logging.getLogger(__name__)
 
