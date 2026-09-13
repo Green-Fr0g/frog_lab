@@ -108,8 +108,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     dump_yaml(os.path.join(log_dir, "params", "env.yaml"), env_cfg)
     dump_yaml(os.path.join(log_dir, "params", "agent.yaml"), agent_cfg)
-    if isinstance(env.unwrapped, ManagerBasedRLEnv):
-        export_deploy_cfg(env.unwrapped, log_dir)
+    export_deploy_cfg(env.unwrapped, log_dir)
     start_time = time.time()
     runner.learn(num_learning_iterations=agent_cfg.max_iterations, init_at_random_ep_len=True)
     logger.info("Training time: %.2f seconds", time.time() - start_time)

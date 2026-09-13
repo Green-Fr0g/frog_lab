@@ -48,7 +48,8 @@ def export_deploy_cfg(env: ManagerBasedRLEnv, log_dir):
     cfg["joint_ids_map"] = list(asset.data.joint_names)
 
     # --- control rate ---
-    cfg["step_dt"] = env.cfg.sim.dt * env.cfg.decimation
+    cfg["sim_dt"] = env.cfg.sim.dt
+    cfg["decimation"] = env.cfg.decimation
 
     # --- actuator gains and default joint state (in joint_ids_map order) ---
     cfg["stiffness"] = asset.data.default_joint_stiffness[0].detach().cpu().numpy().tolist()
