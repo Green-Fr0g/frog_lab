@@ -3,9 +3,31 @@
 import isaaclab.sim as sim_utils
 from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets import ArticulationCfg
+
 from frog_lab.assets import FROG_LAB_DATA_DIR
 
 G1_23DOF_URDF_PATH = f"{FROG_LAB_DATA_DIR}/g1/urdf/g1_23dof_rev_1_0.urdf"
+
+G1_23DOF_ROOT_LINK_NAME = "pelvis"
+G1_23DOF_ALL_JOINT_NAMES = (
+    "left_hip_pitch_joint", "left_hip_roll_joint", "left_hip_yaw_joint", "left_knee_joint",
+    "left_ankle_pitch_joint", "left_ankle_roll_joint", "right_hip_pitch_joint", "right_hip_roll_joint",
+    "right_hip_yaw_joint", "right_knee_joint", "right_ankle_pitch_joint", "right_ankle_roll_joint",
+    "waist_yaw_joint", "left_shoulder_pitch_joint", "left_shoulder_roll_joint", "left_shoulder_yaw_joint",
+    "left_elbow_joint", "left_wrist_roll_joint", "right_shoulder_pitch_joint", "right_shoulder_roll_joint",
+    "right_shoulder_yaw_joint", "right_elbow_joint", "right_wrist_roll_joint",
+)
+G1_23DOF_CONTROL_JOINT_NAMES = G1_23DOF_ALL_JOINT_NAMES
+G1_23DOF_AMP_JOINT_NAMES = G1_23DOF_CONTROL_JOINT_NAMES
+G1_23DOF_BODY_NAMES = (
+    "pelvis", "left_hip_pitch_link", "left_hip_roll_link", "left_hip_yaw_link", "left_knee_link",
+    "left_ankle_pitch_link", "left_ankle_roll_link", "right_hip_pitch_link", "right_hip_roll_link",
+    "right_hip_yaw_link", "right_knee_link", "right_ankle_pitch_link", "right_ankle_roll_link",
+    "torso_link", "left_shoulder_pitch_link", "left_shoulder_roll_link", "left_shoulder_yaw_link",
+    "left_elbow_link", "left_wrist_roll_rubber_hand", "right_shoulder_pitch_link", "right_shoulder_roll_link",
+    "right_shoulder_yaw_link", "right_elbow_link", "right_wrist_roll_rubber_hand",
+)
+G1_23DOF_ACTION_SCALE: dict[str, float] = {}
 
 
 G1_23DOF_CFG = ArticulationCfg(

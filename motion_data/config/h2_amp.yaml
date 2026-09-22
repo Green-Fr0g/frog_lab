@@ -1,6 +1,8 @@
 motion_data:
   robot_name: h2
-  root_state_columns: [base_pos_xyz, base_quat]
+  root_state_columns:
+    - base_pos_xyz
+    - base_quat
   root_link_name: pelvis
   root_quat_order: xyzw
   csv_fps: 120
@@ -23,6 +25,7 @@ motion_data:
     - ../amp/h2/walkandrun/walk_forward_loop_002__A024_from_g1_h2.csv
     - ../amp/h2/walkandrun/walk_sideway_left_loop_002__A021_from_g1_h2.csv
     - ../amp/h2/walkandrun/walk_sideway_right_loop_001__A022_from_g1_h2.csv
+
   csv_joint_names:
     - left_hip_pitch_joint
     - left_hip_roll_joint

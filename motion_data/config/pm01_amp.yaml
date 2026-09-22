@@ -1,6 +1,8 @@
 motion_data:
   robot_name: pm01
-  root_state_columns: [base_pos_xyz, base_quat]
+  root_state_columns:
+    - base_pos_xyz
+    - base_quat
   root_link_name: LINK_BASE
   root_quat_order: xyzw
   csv_fps: 120
@@ -23,6 +25,7 @@ motion_data:
     - ../amp/pm01/walkanrun/walk_forward_loop_002__A024_from_g1_pm01.csv
     - ../amp/pm01/walkanrun/walk_sideway_left_loop_002__A021_from_g1_pm01.csv
     - ../amp/pm01/walkanrun/walk_sideway_right_loop_001__A022_from_g1_pm01.csv
+
   csv_joint_names:
     - J00_HIP_PITCH_L
     - J01_HIP_ROLL_L

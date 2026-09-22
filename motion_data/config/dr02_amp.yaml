@@ -1,6 +1,8 @@
 motion_data:
-  robot_name: DR02
-  root_state_columns: [base_pos_xyz, base_quat]
+  robot_name: dr02
+  root_state_columns:
+    - base_pos_xyz
+    - base_quat
   root_link_name: base_link
   root_quat_order: xyzw
   csv_fps: 120
@@ -25,6 +27,7 @@ motion_data:
     - ../amp/DR02/walkandrun/walk_forward_loop_002__A024_from_g1_DR02.csv
     - ../amp/DR02/walkandrun/walk_sideway_left_loop_002__A021_from_g1_DR02.csv
     - ../amp/DR02/walkandrun/walk_sideway_right_loop_001__A022_from_g1_DR02.csv
+
   csv_joint_names:
     - waist_z_joint
     - waist_x_joint

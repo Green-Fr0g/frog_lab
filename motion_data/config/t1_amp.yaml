@@ -1,6 +1,8 @@
 motion_data:
   robot_name: t1
-  root_state_columns: [base_pos_xyz, base_quat]
+  root_state_columns:
+    - base_pos_xyz
+    - base_quat
   root_link_name: Trunk
   root_quat_order: xyzw
   csv_fps: 120
@@ -23,6 +25,7 @@ motion_data:
     - ../amp/t1/walkandrun/walk_forward_loop_002__A024_from_g1_booster_t1.csv
     - ../amp/t1/walkandrun/walk_sideway_left_loop_002__A021_from_g1_booster_t1.csv
     - ../amp/t1/walkandrun/walk_sideway_right_loop_001__A022_from_g1_booster_t1.csv
+
   csv_joint_names:
     - AAHead_yaw
     - Head_pitch

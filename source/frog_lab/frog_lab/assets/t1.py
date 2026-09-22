@@ -9,6 +9,23 @@ from frog_lab.assets import FROG_LAB_DATA_DIR
 
 T1_URDF_PATH = f"{FROG_LAB_DATA_DIR}/t1/urdf/t1.urdf"
 
+T1_ROOT_LINK_NAME = "Trunk"
+T1_ALL_JOINT_NAMES = (
+    "AAHead_yaw", "Head_pitch", "Left_Shoulder_Pitch", "Left_Shoulder_Roll", "Left_Elbow_Pitch",
+    "Left_Elbow_Yaw", "Right_Shoulder_Pitch", "Right_Shoulder_Roll", "Right_Elbow_Pitch",
+    "Right_Elbow_Yaw", "Waist", "Left_Hip_Pitch", "Left_Hip_Roll", "Left_Hip_Yaw", "Left_Knee_Pitch",
+    "Left_Ankle_Pitch", "Left_Ankle_Roll", "Right_Hip_Pitch", "Right_Hip_Roll", "Right_Hip_Yaw",
+    "Right_Knee_Pitch", "Right_Ankle_Pitch", "Right_Ankle_Roll",
+)
+T1_CONTROL_JOINT_NAMES = tuple(T1_ALL_JOINT_NAMES[2:])
+T1_AMP_JOINT_NAMES = T1_CONTROL_JOINT_NAMES
+T1_BODY_NAMES = (
+    "Trunk", "H1", "H2", "AL1", "AL2", "AL3", "left_hand_link", "AR1", "AR2", "AR3",
+    "right_hand_link", "Waist", "Hip_Pitch_Left", "Hip_Roll_Left", "Hip_Yaw_Left", "Shank_Left",
+    "Ankle_Cross_Left", "left_foot_link", "Hip_Pitch_Right", "Hip_Roll_Right", "Hip_Yaw_Right",
+    "Shank_Right", "Ankle_Cross_Right", "right_foot_link",
+)
+
 _NATURAL_FREQ = 2.0 * 3.1415926535 * 10.0
 _DAMPING_FACTOR = 2.0 * 2.0 * _NATURAL_FREQ
 
@@ -149,3 +166,7 @@ for actuator_cfg in T1_CFG.actuators.values():
     for name in actuator_cfg.joint_names_expr:
         if name in effort_limits and name in stiffness and stiffness[name]:
             T1_ACTION_SCALE[name] = 0.25 * effort_limits[name] / stiffness[name]
+
+T1_ACTION_SCALE = {
+    name: value for name, value in T1_ACTION_SCALE.items() if name in T1_CONTROL_JOINT_NAMES
+}

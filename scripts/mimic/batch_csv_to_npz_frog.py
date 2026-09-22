@@ -3,8 +3,7 @@
 This wrapper discovers conversion jobs from yaml configs and invokes the
 single-file converter once per CSV. Two input modes are supported:
 
-1. ``--config``: one yaml. Prefer ``csv_paths`` for multiple files; ``csv_path``
-   also accepts a string or a list for compatibility.
+1. ``--config``: one yaml containing a ``csv_paths`` list.
 2. ``--config_dir``: a directory of yaml files; each file may itself contain
    one or many CSV paths
 
@@ -25,6 +24,7 @@ from __future__ import annotations
 import argparse
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -36,6 +36,7 @@ import yaml
 class ConversionJob:
     config_path: Path
     csv_path: Path
+    csv_index: int
     output_path: Path
 
 
@@ -47,7 +48,7 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
     source.add_argument(
         "--config",
         type=Path,
-        help="Single motion config yaml. csv_path / csv_paths may be a string or a list.",
+        help="Single motion config yaml containing a csv_paths list.",
     )
     source.add_argument(
         "--config_dir",
@@ -114,11 +115,7 @@ def _resolve_path(base_dir: Path, maybe_path: str) -> Path:
 
 
 def _normalize_csv_entries(raw: Any, field_name: str) -> list[str]:
-    """Accept a string or a list of strings for csv_path / csv_paths."""
-    if isinstance(raw, str):
-        if not raw.strip():
-            raise ValueError(f"'{field_name}' is empty")
-        return [raw]
+    """Validate and return a non-empty list of CSV paths."""
     if isinstance(raw, list):
         if not raw:
             raise ValueError(f"'{field_name}' list is empty")
@@ -130,31 +127,13 @@ def _normalize_csv_entries(raw: Any, field_name: str) -> list[str]:
                 raise ValueError(f"'{field_name}' contains an empty path entry")
             entries.append(item)
         return entries
-    raise TypeError(f"'{field_name}' must be a string or list of strings, got: {type(raw).__name__}")
+    raise TypeError(f"'{field_name}' must be a list of strings, got: {type(raw).__name__}")
 
 
 def _extract_csv_entries(motion_cfg: dict[str, Any]) -> list[str]:
-    has_csv_path = "csv_path" in motion_cfg
-    has_csv_paths = "csv_paths" in motion_cfg
-    if not has_csv_path and not has_csv_paths:
-        raise KeyError("motion_data must contain 'csv_path' or 'csv_paths'")
-
-    entries: list[str] = []
-    if has_csv_paths:
-        entries.extend(_normalize_csv_entries(motion_cfg["csv_paths"], "csv_paths"))
-    if has_csv_path:
-        # Compatible with configs that put multiple paths under csv_path by mistake.
-        entries.extend(_normalize_csv_entries(motion_cfg["csv_path"], "csv_path"))
-
-    # Keep order while dropping exact duplicates.
-    deduped: list[str] = []
-    seen: set[str] = set()
-    for entry in entries:
-        if entry in seen:
-            continue
-        seen.add(entry)
-        deduped.append(entry)
-    return deduped
+    if "csv_paths" not in motion_cfg:
+        raise KeyError("motion_data must contain 'csv_paths'")
+    return _normalize_csv_entries(motion_cfg["csv_paths"], "csv_paths")
 
 
 def discover_config_files(config_dir: Path, pattern: str, recursive: bool) -> list[Path]:
@@ -201,10 +180,17 @@ def build_jobs_from_config(config_path: Path, output_dir: Path, used_names: set[
         raise TypeError(f"'motion_data' must be a mapping in: {config_path}")
 
     jobs: list[ConversionJob] = []
-    for entry in _extract_csv_entries(motion_cfg):
+    for csv_index, entry in enumerate(_extract_csv_entries(motion_cfg)):
         csv_path = _resolve_path(config_path.parent, entry)
         output_path = _unique_output_path(output_dir, csv_path, used_names)
-        jobs.append(ConversionJob(config_path=config_path, csv_path=csv_path, output_path=output_path))
+        jobs.append(
+            ConversionJob(
+                config_path=config_path,
+                csv_path=csv_path,
+                csv_index=csv_index,
+                output_path=output_path,
+            )
+        )
     return jobs
 
 
@@ -233,6 +219,7 @@ def build_command(
     python_executable: str,
     converter_path: Path,
     job: ConversionJob,
+    single_config_path: Path,
     output_fps: int,
     frame_range: list[int] | None,
     passthrough_args: list[str],
@@ -241,9 +228,7 @@ def build_command(
         python_executable,
         str(converter_path),
         "--config",
-        str(job.config_path),
-        "--csv_path",
-        str(job.csv_path),
+        str(single_config_path),
         "--output_name",
         str(job.output_path),
         "--output_fps",
@@ -279,40 +264,52 @@ def main() -> None:
     skipped = 0
     failed = 0
 
-    for job in jobs:
-        if job.output_path.exists() and not args.overwrite:
-            print(f"[SKIP] {job.output_path} already exists.")
-            skipped += 1
-            continue
+    with tempfile.TemporaryDirectory(prefix="frog_lab_csv_configs_") as temp_dir:
+        temp_dir_path = Path(temp_dir)
+        for job in jobs:
+            if job.output_path.exists() and not args.overwrite:
+                print(f"[SKIP] {job.output_path} already exists.")
+                skipped += 1
+                continue
 
-        command = build_command(
-            python_executable=args.python,
-            converter_path=converter_path,
-            job=job,
-            output_fps=args.output_fps,
-            frame_range=args.frame_range,
-            passthrough_args=passthrough_args,
-        )
-        print(f"[RUN] {job.csv_path} -> {job.output_path}")
-        print(f"      {' '.join(command)}")
+            source_config = _load_yaml(job.config_path)
+            motion_cfg = source_config.get("motion_data")
+            if not isinstance(motion_cfg, dict):
+                raise TypeError(f"'motion_data' must be a mapping in: {job.config_path}")
+            motion_cfg["csv_paths"] = [str(job.csv_path)]
+            single_config_path = temp_dir_path / f"{job.config_path.stem}_{job.csv_index}.yaml"
+            with single_config_path.open("w", encoding="utf-8") as config_file:
+                yaml.safe_dump(source_config, config_file, sort_keys=False)
 
-        if args.dry_run:
+            command = build_command(
+                python_executable=args.python,
+                converter_path=converter_path,
+                job=job,
+                single_config_path=single_config_path,
+                output_fps=args.output_fps,
+                frame_range=args.frame_range,
+                passthrough_args=passthrough_args,
+            )
+            print(f"[RUN] {job.csv_path} -> {job.output_path}")
+            print(f"      {' '.join(command)}")
+
+            if args.dry_run:
+                if not job.csv_path.is_file():
+                    print(f"[WARN] CSV not found for config {job.config_path}: {job.csv_path}")
+                converted += 1
+                continue
+
             if not job.csv_path.is_file():
-                print(f"[WARN] CSV not found for config {job.config_path}: {job.csv_path}")
+                print(f"[FAIL] CSV not found for config {job.config_path}: {job.csv_path}")
+                failed += 1
+                continue
+
+            result = subprocess.run(command, check=False)
+            if result.returncode != 0:
+                print(f"[FAIL] Conversion failed with exit code {result.returncode}: {job.csv_path}")
+                failed += 1
+                continue
             converted += 1
-            continue
-
-        if not job.csv_path.is_file():
-            print(f"[FAIL] CSV not found for config {job.config_path}: {job.csv_path}")
-            failed += 1
-            continue
-
-        result = subprocess.run(command, check=False)
-        if result.returncode != 0:
-            print(f"[FAIL] Conversion failed with exit code {result.returncode}: {job.csv_path}")
-            failed += 1
-            continue
-        converted += 1
 
     print(f"[DONE] converted={converted}, skipped={skipped}, failed={failed}, total={len(jobs)}")
     if failed > 0:

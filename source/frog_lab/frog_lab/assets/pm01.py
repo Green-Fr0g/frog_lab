@@ -145,6 +145,19 @@ PM01_DOF_ORDER = [
 # AMP discriminator order excludes the head yaw joint.
 PM01_AMP_DOF_ORDER = PM01_DOF_ORDER[:-1]
 
+PM01_ROOT_LINK_NAME = "LINK_BASE"
+PM01_ALL_JOINT_NAMES = tuple(PM01_DOF_ORDER)
+PM01_CONTROL_JOINT_NAMES = tuple(PM01_DOF_ORDER[:-1])
+PM01_AMP_JOINT_NAMES = PM01_CONTROL_JOINT_NAMES
+PM01_BODY_NAMES = (
+    "LINK_BASE", "LINK_HIP_PITCH_L", "LINK_HIP_ROLL_L", "LINK_HIP_YAW_L", "LINK_KNEE_PITCH_L",
+    "LINK_ANKLE_PITCH_L", "LINK_ANKLE_ROLL_L", "LINK_HIP_PITCH_R", "LINK_HIP_ROLL_R", "LINK_HIP_YAW_R",
+    "LINK_KNEE_PITCH_R", "LINK_ANKLE_PITCH_R", "LINK_ANKLE_ROLL_R", "LINK_TORSO_YAW",
+    "LINK_SHOULDER_PITCH_L", "LINK_SHOULDER_ROLL_L", "LINK_SHOULDER_YAW_L", "LINK_ELBOW_PITCH_L",
+    "LINK_ELBOW_YAW_L", "LINK_SHOULDER_PITCH_R", "LINK_SHOULDER_ROLL_R", "LINK_SHOULDER_YAW_R",
+    "LINK_ELBOW_PITCH_R", "LINK_ELBOW_YAW_R", "LINK_HEAD_YAW",
+)
+
 
 PM01_ACTION_SCALE = {}
 for actuator_cfg in PM01_CFG.actuators.values():
@@ -157,3 +170,7 @@ for actuator_cfg in PM01_CFG.actuators.values():
     for name in effort_limits:
         if name in stiffness and stiffness[name]:
             PM01_ACTION_SCALE[name] = 0.25 * effort_limits[name] / stiffness[name]
+
+PM01_ACTION_SCALE = {
+    name: value for name, value in PM01_ACTION_SCALE.items() if name in PM01_CONTROL_JOINT_NAMES
+}
