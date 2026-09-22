@@ -9,30 +9,31 @@ from frog_lab.assets import FROG_LAB_DATA_DIR
 
 T1_URDF_PATH = f"{FROG_LAB_DATA_DIR}/t1/urdf/t1.urdf"
 
-T1_ROOT_LINK_NAME = "Trunk"
-T1_ALL_JOINT_NAMES = (
-    "AAHead_yaw", "Head_pitch", "Left_Shoulder_Pitch", "Left_Shoulder_Roll", "Left_Elbow_Pitch",
-    "Left_Elbow_Yaw", "Right_Shoulder_Pitch", "Right_Shoulder_Roll", "Right_Elbow_Pitch",
-    "Right_Elbow_Yaw", "Waist", "Left_Hip_Pitch", "Left_Hip_Roll", "Left_Hip_Yaw", "Left_Knee_Pitch",
-    "Left_Ankle_Pitch", "Left_Ankle_Roll", "Right_Hip_Pitch", "Right_Hip_Roll", "Right_Hip_Yaw",
-    "Right_Knee_Pitch", "Right_Ankle_Pitch", "Right_Ankle_Roll",
-)
-T1_CONTROL_JOINT_NAMES = tuple(T1_ALL_JOINT_NAMES[2:])
-T1_AMP_JOINT_NAMES = T1_CONTROL_JOINT_NAMES
-T1_BODY_NAMES = (
-    "Trunk", "H1", "H2", "AL1", "AL2", "AL3", "left_hand_link", "AR1", "AR2", "AR3",
-    "right_hand_link", "Waist", "Hip_Pitch_Left", "Hip_Roll_Left", "Hip_Yaw_Left", "Shank_Left",
-    "Ankle_Cross_Left", "left_foot_link", "Hip_Pitch_Right", "Hip_Roll_Right", "Hip_Yaw_Right",
-    "Shank_Right", "Ankle_Cross_Right", "right_foot_link",
-)
-
-_NATURAL_FREQ = 2.0 * 3.1415926535 * 10.0
-_DAMPING_FACTOR = 2.0 * 2.0 * _NATURAL_FREQ
 
 
-def _pd_gains(armature: float) -> tuple[float, float]:
-    """Return the official Booster default stiffness and damping for a motor inertia."""
-    return armature * _NATURAL_FREQ**2, armature * _DAMPING_FACTOR
+NATURAL_FREQ = 10.0 * 2.0 * 3.1415926535
+DAMPING_RATIO = 2.0
+
+ARMATURE_ARM = 0.0282528
+ARMATURE_WAIST = 0.0478125
+ARMATURE_HIP_PITCH = 0.0523908
+ARMATURE_KNEE = 0.095625
+ARMATURE_ANKLE = 0.0339552
+ARMATURE_HEAD = 0.0018
+
+STIFFNESS_ARM = ARMATURE_ARM * NATURAL_FREQ**2
+STIFFNESS_WAIST = ARMATURE_WAIST * NATURAL_FREQ**2
+STIFFNESS_HIP_PITCH = ARMATURE_HIP_PITCH * NATURAL_FREQ**2
+STIFFNESS_KNEE = ARMATURE_KNEE * NATURAL_FREQ**2
+STIFFNESS_ANKLE = ARMATURE_ANKLE * NATURAL_FREQ**2
+STIFFNESS_HEAD = ARMATURE_HEAD * NATURAL_FREQ**2
+
+DAMPING_ARM = 2.0 * DAMPING_RATIO * ARMATURE_ARM * NATURAL_FREQ
+DAMPING_WAIST = 2.0 * DAMPING_RATIO * ARMATURE_WAIST * NATURAL_FREQ
+DAMPING_HIP_PITCH = 2.0 * DAMPING_RATIO * ARMATURE_HIP_PITCH * NATURAL_FREQ
+DAMPING_KNEE = 2.0 * DAMPING_RATIO * ARMATURE_KNEE * NATURAL_FREQ
+DAMPING_ANKLE = 2.0 * DAMPING_RATIO * ARMATURE_ANKLE * NATURAL_FREQ
+DAMPING_HEAD = 2.0 * DAMPING_RATIO * ARMATURE_HEAD * NATURAL_FREQ
 
 
 T1_CFG = ArticulationCfg(
@@ -84,17 +85,17 @@ T1_CFG = ArticulationCfg(
             ],
             effort_limit_sim=38.3,
             velocity_limit_sim=17.59,
-            stiffness=_pd_gains(0.0282528)[0],
-            damping=_pd_gains(0.0282528)[1],
-            armature=0.0282528,
+            stiffness=STIFFNESS_ARM,
+            damping=DAMPING_ARM,
+            armature=ARMATURE_ARM,
         ),
         "waist": ImplicitActuatorCfg(
             joint_names_expr=["Waist"],
             effort_limit_sim=68.0,
             velocity_limit_sim=14.66,
-            stiffness=_pd_gains(0.0478125)[0],
-            damping=_pd_gains(0.0478125)[1],
-            armature=0.0478125,
+            stiffness=STIFFNESS_WAIST,
+            damping=DAMPING_WAIST,
+            armature=ARMATURE_WAIST,
         ),
         "legs": ImplicitActuatorCfg(
             joint_names_expr=[
@@ -116,44 +117,60 @@ T1_CFG = ArticulationCfg(
                 ".*_Knee_Pitch": 14.66,
             },
             stiffness={
-                ".*_Hip_Pitch": _pd_gains(0.0523908)[0],
-                ".*_Hip_Roll": _pd_gains(0.0478125)[0],
-                ".*_Hip_Yaw": _pd_gains(0.0478125)[0],
-                ".*_Knee_Pitch": _pd_gains(0.095625)[0],
+                ".*_Hip_Pitch": STIFFNESS_HIP_PITCH,
+                ".*_Hip_Roll": STIFFNESS_WAIST,
+                ".*_Hip_Yaw": STIFFNESS_WAIST,
+                ".*_Knee_Pitch": STIFFNESS_KNEE,
             },
             damping={
-                ".*_Hip_Pitch": _pd_gains(0.0523908)[1],
-                ".*_Hip_Roll": _pd_gains(0.0478125)[1],
-                ".*_Hip_Yaw": _pd_gains(0.0478125)[1],
-                ".*_Knee_Pitch": _pd_gains(0.095625)[1],
+                ".*_Hip_Pitch": DAMPING_HIP_PITCH,
+                ".*_Hip_Roll": DAMPING_WAIST,
+                ".*_Hip_Yaw": DAMPING_WAIST,
+                ".*_Knee_Pitch": DAMPING_KNEE,
             },
             armature={
-                ".*_Hip_Pitch": 0.0523908,
-                ".*_Hip_Roll": 0.0478125,
-                ".*_Hip_Yaw": 0.0478125,
-                ".*_Knee_Pitch": 0.095625,
+                ".*_Hip_Pitch": ARMATURE_HIP_PITCH,
+                ".*_Hip_Roll": ARMATURE_WAIST,
+                ".*_Hip_Yaw": ARMATURE_WAIST,
+                ".*_Knee_Pitch": ARMATURE_KNEE,
             },
         ),
         "feet": ImplicitActuatorCfg(
             joint_names_expr=[".*_Ankle_Pitch", ".*_Ankle_Roll"],
             effort_limit_sim={".*_Ankle_Pitch": 76.0, ".*_Ankle_Roll": 76.0},
             velocity_limit_sim={".*_Ankle_Pitch": 12.57, ".*_Ankle_Roll": 12.57},
-            stiffness=_pd_gains(0.0339552)[0],
-            damping=_pd_gains(0.0339552)[1],
+            stiffness=STIFFNESS_ANKLE,
+            damping=DAMPING_ANKLE,
             # The parallel ankle wrapper doubles the reflected armature.
-            armature=2.0 * 0.0339552,
+            armature=2.0 * ARMATURE_ANKLE,
         ),
         "head": ImplicitActuatorCfg(
             joint_names_expr=[".*Head.*"],
             effort_limit_sim=7.0,
             velocity_limit_sim=12.57,
-            stiffness=_pd_gains(0.0018)[0],
-            damping=_pd_gains(0.0018)[1],
-            armature=0.0018,
+            stiffness=STIFFNESS_HEAD,
+            damping=DAMPING_HEAD,
+            armature=ARMATURE_HEAD,
         ),
     },
 )
 
+T1_ROOT_LINK_NAME = "Trunk"
+T1_ALL_JOINT_NAMES = (
+    "AAHead_yaw", "Head_pitch", "Left_Shoulder_Pitch", "Left_Shoulder_Roll", "Left_Elbow_Pitch",
+    "Left_Elbow_Yaw", "Right_Shoulder_Pitch", "Right_Shoulder_Roll", "Right_Elbow_Pitch",
+    "Right_Elbow_Yaw", "Waist", "Left_Hip_Pitch", "Left_Hip_Roll", "Left_Hip_Yaw", "Left_Knee_Pitch",
+    "Left_Ankle_Pitch", "Left_Ankle_Roll", "Right_Hip_Pitch", "Right_Hip_Roll", "Right_Hip_Yaw",
+    "Right_Knee_Pitch", "Right_Ankle_Pitch", "Right_Ankle_Roll",
+)
+T1_CONTROL_JOINT_NAMES = tuple(T1_ALL_JOINT_NAMES[2:])
+T1_AMP_JOINT_NAMES = T1_CONTROL_JOINT_NAMES
+T1_BODY_NAMES = (
+    "Trunk", "H1", "H2", "AL1", "AL2", "AL3", "left_hand_link", "AR1", "AR2", "AR3",
+    "right_hand_link", "Waist", "Hip_Pitch_Left", "Hip_Roll_Left", "Hip_Yaw_Left", "Shank_Left",
+    "Ankle_Cross_Left", "left_foot_link", "Hip_Pitch_Right", "Hip_Roll_Right", "Hip_Yaw_Right",
+    "Shank_Right", "Ankle_Cross_Right", "right_foot_link",
+)
 
 T1_ACTION_SCALE = {}
 for actuator_cfg in T1_CFG.actuators.values():

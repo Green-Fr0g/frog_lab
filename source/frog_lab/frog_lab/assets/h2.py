@@ -10,81 +10,6 @@ from frog_lab.assets import FROG_LAB_DATA_DIR
 H2_URDF_PATH = f"{FROG_LAB_DATA_DIR}/h2/urdf/h2.urdf"
 
 
-H2_ROOT_LINK_NAME = "pelvis"
-H2_ALL_JOINT_NAMES = (
-    "left_hip_pitch_joint",
-    "left_hip_roll_joint",
-    "left_hip_yaw_joint",
-    "left_knee_joint",
-    "left_ankle_roll_joint",
-    "left_ankle_pitch_joint",
-    "right_hip_pitch_joint",
-    "right_hip_roll_joint",
-    "right_hip_yaw_joint",
-    "right_knee_joint",
-    "right_ankle_roll_joint",
-    "right_ankle_pitch_joint",
-    "waist_yaw_joint",
-    "waist_roll_joint",
-    "waist_pitch_joint",
-    "head_pitch_joint",
-    "head_yaw_joint",
-    "left_shoulder_pitch_joint",
-    "left_shoulder_roll_joint",
-    "left_shoulder_yaw_joint",
-    "left_elbow_joint",
-    "left_wrist_roll_joint",
-    "left_wrist_pitch_joint",
-    "left_wrist_yaw_joint",
-    "right_shoulder_pitch_joint",
-    "right_shoulder_roll_joint",
-    "right_shoulder_yaw_joint",
-    "right_elbow_joint",
-    "right_wrist_roll_joint",
-    "right_wrist_pitch_joint",
-    "right_wrist_yaw_joint",
-)
-H2_CONTROL_JOINT_NAMES = tuple(
-    name for name in H2_ALL_JOINT_NAMES if name not in {"head_pitch_joint", "head_yaw_joint"}
-)
-H2_AMP_JOINT_NAMES = H2_CONTROL_JOINT_NAMES
-H2_BODY_NAMES = (
-    "pelvis",
-    "left_hip_pitch_link",
-    "left_hip_roll_link",
-    "left_hip_yaw_link",
-    "left_knee_link",
-    "left_ankle_roll_link",
-    "left_ankle_pitch_link",
-    "right_hip_pitch_link",
-    "right_hip_roll_link",
-    "right_hip_yaw_link",
-    "right_knee_link",
-    "right_ankle_roll_link",
-    "right_ankle_pitch_link",
-    "waist_yaw_link",
-    "waist_roll_link",
-    "torso_link",
-    "head_pitch_link",
-    "head_yaw_link",
-    "left_shoulder_pitch_link",
-    "left_shoulder_roll_link",
-    "left_shoulder_yaw_link",
-    "left_elbow_link",
-    "left_wrist_roll_link",
-    "left_wrist_pitch_link",
-    "left_wrist_yaw_link",
-    "right_shoulder_pitch_link",
-    "right_shoulder_roll_link",
-    "right_shoulder_yaw_link",
-    "right_elbow_link",
-    "right_wrist_roll_link",
-    "right_wrist_pitch_link",
-    "right_wrist_yaw_link",
-)
-H2_ACTION_SCALE: dict[str, float] = {}
-
-
 H2_CFG = ArticulationCfg(
     spawn=sim_utils.UrdfFileCfg(
         asset_path=H2_URDF_PATH,
@@ -183,4 +108,43 @@ H2_CFG = ArticulationCfg(
 )
 
 
-H2_DOF_ORDER = list(H2_ALL_JOINT_NAMES)
+H2_ROOT_LINK_NAME = "pelvis"
+H2_ALL_JOINT_NAMES = (
+    "left_hip_pitch_joint", "left_hip_roll_joint", "left_hip_yaw_joint", "left_knee_joint",
+    "left_ankle_roll_joint", "left_ankle_pitch_joint", "right_hip_pitch_joint", "right_hip_roll_joint",
+    "right_hip_yaw_joint", "right_knee_joint", "right_ankle_roll_joint", "right_ankle_pitch_joint",
+    "waist_yaw_joint", "waist_roll_joint", "waist_pitch_joint", "head_pitch_joint", "head_yaw_joint",
+    "left_shoulder_pitch_joint", "left_shoulder_roll_joint", "left_shoulder_yaw_joint", "left_elbow_joint",
+    "left_wrist_roll_joint", "left_wrist_pitch_joint", "left_wrist_yaw_joint", "right_shoulder_pitch_joint",
+    "right_shoulder_roll_joint", "right_shoulder_yaw_joint", "right_elbow_joint", "right_wrist_roll_joint",
+    "right_wrist_pitch_joint", "right_wrist_yaw_joint",
+)
+H2_CONTROL_JOINT_NAMES = tuple(
+    name for name in H2_ALL_JOINT_NAMES if name not in {"head_pitch_joint", "head_yaw_joint"}
+)
+H2_AMP_JOINT_NAMES = H2_CONTROL_JOINT_NAMES
+H2_BODY_NAMES = (
+    "pelvis", "left_hip_pitch_link", "left_hip_roll_link", "left_hip_yaw_link", "left_knee_link",
+    "left_ankle_roll_link", "left_ankle_pitch_link", "right_hip_pitch_link", "right_hip_roll_link",
+    "right_hip_yaw_link", "right_knee_link", "right_ankle_roll_link", "right_ankle_pitch_link",
+    "waist_yaw_link", "waist_roll_link", "torso_link", "head_pitch_link", "head_yaw_link",
+    "left_shoulder_pitch_link", "left_shoulder_roll_link", "left_shoulder_yaw_link", "left_elbow_link",
+    "left_wrist_roll_link", "left_wrist_pitch_link", "left_wrist_yaw_link", "right_shoulder_pitch_link",
+    "right_shoulder_roll_link", "right_shoulder_yaw_link", "right_elbow_link", "right_wrist_roll_link",
+    "right_wrist_pitch_link", "right_wrist_yaw_link",
+)
+H2_ACTION_SCALE = {}
+for actuator_cfg in H2_CFG.actuators.values():
+    effort_limits = actuator_cfg.effort_limit_sim
+    stiffness = actuator_cfg.stiffness
+    if not isinstance(effort_limits, dict):
+        effort_limits = {name: effort_limits for name in actuator_cfg.joint_names_expr}
+    if not isinstance(stiffness, dict):
+        stiffness = {name: stiffness for name in actuator_cfg.joint_names_expr}
+    for name in actuator_cfg.joint_names_expr:
+        if name in effort_limits and name in stiffness and stiffness[name]:
+            H2_ACTION_SCALE[name] = 0.25 * effort_limits[name] / stiffness[name]
+
+H2_ACTION_SCALE = {
+    name: value for name, value in H2_ACTION_SCALE.items() if name in H2_CONTROL_JOINT_NAMES
+}

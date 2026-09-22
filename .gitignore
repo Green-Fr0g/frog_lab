@@ -16,6 +16,7 @@
 
 # Python
 .DS_Store
+uv.lock
 **/*.egg-info/
 **/__pycache__/
 **/.pytest_cache/
@@ -46,6 +47,9 @@ docker/artifacts/
 # Doc Outputs
 **/docs/_build/*
 **/generated/*
+
+# Local documentation
+/commit-conventions.md
 
 # Isaac-Sim packman
 _isaac_sim*
