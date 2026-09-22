@@ -1,5 +1,7 @@
 """Configuration for the Unitree G1 humanoid."""
 
+import re
+
 import isaaclab.sim as sim_utils
 from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets import ArticulationCfg
@@ -120,18 +122,37 @@ G1_BODY_NAMES = (
     "left_wrist_yaw_link", "right_shoulder_pitch_link", "right_shoulder_roll_link", "right_shoulder_yaw_link",
     "right_elbow_link", "right_wrist_roll_link", "right_wrist_pitch_link", "right_wrist_yaw_link",
 )
-G1_ACTION_SCALE = {}
-for actuator_cfg in G1_CFG.actuators.values():
-    effort_limits = actuator_cfg.effort_limit_sim
-    stiffness = actuator_cfg.stiffness
-    if not isinstance(effort_limits, dict):
-        effort_limits = {name: effort_limits for name in actuator_cfg.joint_names_expr}
-    if not isinstance(stiffness, dict):
-        stiffness = {name: stiffness for name in actuator_cfg.joint_names_expr}
-    for name in actuator_cfg.joint_names_expr:
-        if name in effort_limits and name in stiffness and stiffness[name]:
-            G1_ACTION_SCALE[name] = 0.25 * effort_limits[name] / stiffness[name]
+def _g1_actuator_value(joint_name: str, attribute: str) -> float | None:
+    """Look up a per-joint actuator value the way IsaacLab resolves it.
 
-G1_ACTION_SCALE = {
-    name: value for name, value in G1_ACTION_SCALE.items() if name in G1_CONTROL_JOINT_NAMES
-}
+    The actuator group whose ``joint_names_expr`` matches the joint owns it, and within that group
+    the first regex pattern that fully matches the joint wins. Entries matching no pattern resolve
+    to 0.0, which leaves the joint undriven (i.e. free-floating).
+    """
+    for actuator_cfg in G1_CFG.actuators.values():
+        if not any(re.fullmatch(pattern, joint_name) for pattern in actuator_cfg.joint_names_expr):
+            continue
+        values = getattr(actuator_cfg, attribute, None)
+        if values is None:
+            return None
+        if not isinstance(values, dict):
+            return float(values)
+        for pattern, value in values.items():
+            if re.fullmatch(pattern, joint_name):
+                return float(value)
+        return 0.0
+    return None
+
+
+def _g1_action_scale() -> dict[str, float]:
+    """Map each controlled joint to its action scale, ``0.25 * effort_limit / stiffness``."""
+    scales = {}
+    for joint_name in G1_CONTROL_JOINT_NAMES:
+        effort_limit = _g1_actuator_value(joint_name, "effort_limit_sim")
+        stiffness = _g1_actuator_value(joint_name, "stiffness")
+        if effort_limit and stiffness:
+            scales[joint_name] = 0.25 * effort_limit / stiffness
+    return scales
+
+
+G1_ACTION_SCALE = _g1_action_scale()

@@ -1,5 +1,7 @@
 """Configuration for the DeepRobotics DR02-Pro humanoid."""
 
+import re
+
 import isaaclab.sim as sim_utils
 from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets import ArticulationCfg
@@ -68,24 +70,30 @@ DR02_CFG = ArticulationCfg(
         "joints": ImplicitActuatorCfg(
             joint_names_expr=[".*"],
             effort_limit_sim={
-                ".*_hip_y_joint|.*_hip_x_joint|.*_knee_joint": 330.0,
-                ".*_hip_z_joint|.*_ankle_y_joint|waist_z_joint|.*_shoulder_y_joint|.*_shoulder_x_joint|.*_shoulder_z_joint|.*_elbow_joint": 105.0,
+                ".*_hip_y_joint|.*_hip_x_joint|.*_knee_joint|waist_y_joint": 330.0,
+                ".*_hip_z_joint|.*_ankle_y_joint|waist_z_joint|waist_x_joint|.*_shoulder_y_joint|.*_shoulder_x_joint|.*_shoulder_z_joint|.*_elbow_joint": 105.0,
                 ".*_ankle_x_joint": 35.0,
+                ".*_wrist_[xyz]_joint": 35.0,
+                "neck_z_joint|neck_y_joint": 35.0,
             },
             velocity_limit_sim={".*": 1.0e7},
             stiffness={
-                ".*_hip_y_joint|.*_hip_x_joint|.*_knee_joint": 250.0,
+                ".*_hip_y_joint|.*_hip_x_joint|.*_knee_joint|waist_y_joint": 250.0,
                 ".*_hip_z_joint": 180.0,
                 ".*_ankle_y_joint|.*_shoulder_y_joint|.*_shoulder_x_joint|.*_shoulder_z_joint|.*_elbow_joint": 100.0,
-                "waist_z_joint": 150.0,
+                "waist_z_joint|waist_x_joint": 150.0,
                 ".*_ankle_x_joint": 40.0,
+                ".*_wrist_[xyz]_joint": 40.0,
+                "neck_z_joint|neck_y_joint": 40.0,
             },
             damping={
-                ".*_hip_y_joint|.*_hip_x_joint|.*_knee_joint": 6.0,
+                ".*_hip_y_joint|.*_hip_x_joint|.*_knee_joint|waist_y_joint": 6.0,
                 ".*_hip_z_joint": 4.0,
                 ".*_ankle_y_joint|.*_shoulder_y_joint|.*_shoulder_x_joint|.*_shoulder_z_joint|.*_elbow_joint": 2.5,
-                "waist_z_joint": 3.0,
+                "waist_z_joint|waist_x_joint": 3.0,
                 ".*_ankle_x_joint": 1.0,
+                ".*_wrist_[xyz]_joint": 1.0,
+                "neck_z_joint|neck_y_joint": 1.0,
             },
         )
     },
@@ -114,18 +122,39 @@ DR02_BODY_NAMES = (
     "left_ankle_x_link", "right_hip_y_link", "right_hip_x_link", "right_hip_z_link", "right_knee_link",
     "right_ankle_y_link", "right_ankle_x_link",
 )
-DR02_ACTION_SCALE = {}
-for actuator_cfg in DR02_CFG.actuators.values():
-    effort_limits = actuator_cfg.effort_limit_sim
-    stiffness = actuator_cfg.stiffness
-    if not isinstance(effort_limits, dict):
-        effort_limits = {name: effort_limits for name in actuator_cfg.joint_names_expr}
-    if not isinstance(stiffness, dict):
-        stiffness = {name: stiffness for name in actuator_cfg.joint_names_expr}
-    for name in actuator_cfg.joint_names_expr:
-        if name in effort_limits and name in stiffness and stiffness[name]:
-            DR02_ACTION_SCALE[name] = 0.25 * effort_limits[name] / stiffness[name]
 
-DR02_ACTION_SCALE = {
-    name: value for name, value in DR02_ACTION_SCALE.items() if name in DR02_CONTROL_JOINT_NAMES
-}
+
+def _dr02_actuator_value(joint_name: str, attribute: str) -> float | None:
+    """Look up a per-joint actuator value the way IsaacLab resolves it.
+
+    The actuator group whose ``joint_names_expr`` matches the joint owns it, and within that group
+    the first regex pattern that fully matches the joint wins. Entries matching no pattern resolve
+    to 0.0, which leaves the joint undriven (i.e. free-floating).
+    """
+    for actuator_cfg in DR02_CFG.actuators.values():
+        if not any(re.fullmatch(pattern, joint_name) for pattern in actuator_cfg.joint_names_expr):
+            continue
+        values = getattr(actuator_cfg, attribute, None)
+        if values is None:
+            return None
+        if not isinstance(values, dict):
+            return float(values)
+        for pattern, value in values.items():
+            if re.fullmatch(pattern, joint_name):
+                return float(value)
+        return 0.0
+    return None
+
+
+def _dr02_action_scale() -> dict[str, float]:
+    """Map each controlled joint to its action scale, ``0.25 * effort_limit / stiffness``."""
+    scales = {}
+    for joint_name in DR02_CONTROL_JOINT_NAMES:
+        effort_limit = _dr02_actuator_value(joint_name, "effort_limit_sim")
+        stiffness = _dr02_actuator_value(joint_name, "stiffness")
+        if effort_limit and stiffness:
+            scales[joint_name] = 0.25 * effort_limit / stiffness
+    return scales
+
+
+DR02_ACTION_SCALE = _dr02_action_scale()
