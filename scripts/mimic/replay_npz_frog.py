@@ -29,18 +29,31 @@ from isaaclab.sim import SimulationContext
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 
+# asset registry
+from frog_lab.assets.dr02 import DR02_CFG
 from frog_lab.assets.g1_23dof import G1_23DOF_CFG
-from frog_lab.assets.g1 import G1_CFG
 from frog_lab.assets.g1_mimic import G1_CYLINDER_CFG
+from frog_lab.assets.h2 import H2_CFG
+from frog_lab.assets.pm01 import PM01_CFG
+from frog_lab.assets.t1 import T1_CFG
 from frog_lab.tasks.mimic.mdp import MotionLoader
+
+ROBOT_ASSET_REGISTRY: dict[str, ArticulationCfg] = {
+    "g1": G1_CYLINDER_CFG,
+    "g1_23": G1_23DOF_CFG,
+    "h2": H2_CFG,
+    "t1": T1_CFG,
+    "pm01": PM01_CFG,
+    "dr02": DR02_CFG,
+}
 
 
 def _get_robot_asset_cfg(robot_name: str) -> ArticulationCfg:
-    if robot_name == "g1":
-        return G1_CYLINDER_CFG
-    if robot_name == "g1_23":
-        return G1_23DOF_CFG
-    raise KeyError(f"Unknown robot_name '{robot_name}'. Supported: g1, g1_23")
+    """Look up a robot asset config by its registry name."""
+    if robot_name not in ROBOT_ASSET_REGISTRY:
+        supported = ", ".join(sorted(ROBOT_ASSET_REGISTRY))
+        raise KeyError(f"Unknown robot_name '{robot_name}'. Supported: {supported}")
+    return ROBOT_ASSET_REGISTRY[robot_name]
 
 
 def _load_motion_meta(motion_file: str) -> tuple[str, str, list[str], int]:

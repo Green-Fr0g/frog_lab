@@ -1,12 +1,16 @@
 """Replay a CSV motion into Isaac Sim and export it as an NPZ.
 
-This version is config-driven:
-- motion interpretation comes from ``motion_data/config/g1.yaml``
-- robot asset selection comes from a small registry in this script
+This script is config-free: every input comes from the command line. The
+config-driven front end ``config_csv_to_npz_frog.py`` reads a motion yaml and
+invokes this script with the matching arguments.
 
 Example:
     python csv_to_npz_frog.py \
-        --config motion_data/config/g1.yaml \
+        --input_file motion_data/motion_tracking/g1/G1_Take_102.bvh_60hz.csv \
+        --input_fps 120 \
+        --robot_name g1 \
+        --root_link_name pelvis \
+        --csv_joint_names <joint names in csv column order> \
         --output_name /tmp/g1_motion.npz
 """
 
@@ -14,28 +18,45 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 import torch
-import yaml
 
 from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description="Replay motion from csv file and output to npz file.")
-parser.add_argument("--config", type=str, default="motion_data/config/g1.yaml", help="Motion config yaml.")
+parser.add_argument("--input_file", type=str, required=True, help="The path to the input motion csv file.")
+parser.add_argument("--input_fps", type=int, default=120, help="The fps of the input motion.")
 parser.add_argument(
     "--frame_range",
     nargs=2,
     type=int,
     metavar=("START", "END"),
     help=(
-        "Frame range: START END (both inclusive). The frame index starts from 1. "
-        "If not provided, all frames will be loaded."
+        "frame range: START END (both inclusive). The frame index starts from 1. If not provided, all frames will be"
+        " loaded."
     ),
 )
 parser.add_argument("--output_name", type=str, required=True, help="The name of the motion npz file.")
 parser.add_argument("--output_fps", type=int, default=50, help="The fps of the output motion.")
+
+# Robot metadata, normally supplied by the config-driven launcher.
+parser.add_argument("--robot_name", type=str, default=None, help="Robot registry name used to select the asset.")
+parser.add_argument("--root_link_name", type=str, default=None, help="Root link used as the motion anchor.")
+parser.add_argument(
+    "--csv_joint_names",
+    nargs="+",
+    default=None,
+    help="Joint names matching the csv column order. Falls back to the robot joint order when omitted.",
+)
+parser.add_argument(
+    "--root_quat_order",
+    type=str,
+    default="xyzw",
+    choices=("wxyz", "xyzw"),
+    help="Quaternion order of the root rotation inside the csv.",
+)
+
 AppLauncher.add_app_launcher_args(parser)
 args_cli = parser.parse_args()
 
@@ -50,24 +71,23 @@ from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
 from isaaclab.utils.math import axis_angle_from_quat, quat_conjugate, quat_mul, quat_slerp
 
-#asset registry
+# asset registry
+from frog_lab.assets.dr02 import DR02_CFG
 from frog_lab.assets.g1_23dof import G1_23DOF_CFG
 from frog_lab.assets.g1_mimic import G1_CYLINDER_CFG
+from frog_lab.assets.h2 import H2_CFG
+from frog_lab.assets.pm01 import PM01_CFG
+from frog_lab.assets.t1 import T1_CFG
 
+ROBOT_ASSET_REGISTRY: dict[str, ArticulationCfg] = {
+    "g1": G1_CYLINDER_CFG,
+    "g1_23": G1_23DOF_CFG,
+    "h2": H2_CFG,
+    "t1": T1_CFG,
+    "pm01": PM01_CFG,
+    "dr02": DR02_CFG,
+}
 
-def _load_yaml(path: Path) -> dict[str, Any]:
-    with path.open("r", encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-    if not isinstance(data, dict):
-        raise ValueError(f"Invalid yaml structure in: {path}")
-    return data
-
-
-def _resolve_path(base_dir: Path, maybe_path: str) -> Path:
-    path = Path(maybe_path)
-    if path.is_absolute():
-        return path
-    return (base_dir / path).resolve()
 
 def _root_quat_to_wxyz(quat: torch.Tensor, order: str) -> torch.Tensor:
     if order == "wxyz":
@@ -78,11 +98,11 @@ def _root_quat_to_wxyz(quat: torch.Tensor, order: str) -> torch.Tensor:
 
 
 def _get_robot_asset_cfg(robot_name: str) -> ArticulationCfg:
-    if robot_name == "g1":
-        return G1_CYLINDER_CFG
-    if robot_name == "g1_23":
-        return G1_23DOF_CFG
-    raise KeyError(f"Unknown robot_name '{robot_name}'. Supported: g1, g1_23dof")
+    """Look up a robot asset config by its registry name."""
+    if robot_name not in ROBOT_ASSET_REGISTRY:
+        supported = ", ".join(sorted(ROBOT_ASSET_REGISTRY))
+        raise KeyError(f"Unknown robot_name '{robot_name}'. Supported: {supported}")
+    return ROBOT_ASSET_REGISTRY[robot_name]
 
 
 def _build_scene_cfg(robot_cfg: ArticulationCfg) -> type[InteractiveSceneCfg]:
@@ -297,21 +317,13 @@ def run_simulator(
 
 
 def main():
-    config_path = Path(args_cli.config).resolve()
-    config = _load_yaml(config_path)
-    motion_cfg = config["motion_data"]
+    input_path = Path(args_cli.input_file).expanduser().resolve()
+    if not input_path.is_file():
+        raise FileNotFoundError(f"Input motion csv file does not exist: {input_path}")
 
-    robot_name = str(motion_cfg["robot_name"])
-    csv_paths = motion_cfg.get("csv_paths")
-    if not isinstance(csv_paths, list) or len(csv_paths) != 1:
-        raise ValueError("The converter config must contain exactly one CSV path in motion_data.csv_paths.")
-    if not all(isinstance(path, str) and path.strip() for path in csv_paths):
-        raise TypeError("motion_data.csv_paths must contain only non-empty strings.")
-    csv_path = _resolve_path(config_path.parent, csv_paths[0])
-    input_fps = int(motion_cfg.get("csv_fps", 30))
-    root_quat_order = str(motion_cfg.get("root_quat_order", "xyzw"))
-    root_link_name = str(motion_cfg["root_link_name"])
-    csv_joint_names = list(motion_cfg["csv_joint_names"])
+    robot_name = str(args_cli.robot_name)
+    root_link_name = str(args_cli.root_link_name)
+    root_quat_order = str(args_cli.root_quat_order)
 
     sim_cfg = sim_utils.SimulationCfg(device=args_cli.device)
     sim_cfg.dt = 1.0 / args_cli.output_fps
@@ -323,9 +335,14 @@ def main():
     sim.reset()
     print("[INFO]: Setup complete...")
 
+    csv_joint_names = list(args_cli.csv_joint_names) if args_cli.csv_joint_names is not None else None
+    if csv_joint_names is None:
+        csv_joint_names = list(scene["robot"].joint_names)
+        print("[INFO]: --csv_joint_names not given, assuming the csv columns follow the robot joint order.")
+
     motion = MotionLoader(
-        motion_file=str(csv_path),
-        input_fps=input_fps,
+        motion_file=str(input_path),
+        input_fps=args_cli.input_fps,
         output_fps=args_cli.output_fps,
         device=sim.device,
         frame_range=tuple(args_cli.frame_range) if args_cli.frame_range is not None else None,
