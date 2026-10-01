@@ -18,14 +18,20 @@
 在已安装 Isaac Lab 的 Python 环境中执行：
 
 ```bash
-git clone git@github.com:Green-Fr0g/frog_lab.git
+git clone --recurse-submodules git@github.com:Green-Fr0g/frog_lab.git
 cd frog_lab
+
+# 如果已经 clone 但没有使用 --recurse-submodules
+git submodule update --init --recursive
 
 python -m pip install -e source/frog_lab
 python -m pip install -e source/frog_rl
 ```
 
-安装完成后，`frog_lab` 提供 Isaac Lab 任务与配置，`frog_rl` 提供自定义训练算法和 runner。
+仓库中的 `source/frog_rl` 是独立的 Git submodule。使用
+`--recurse-submodules` 或执行 `git submodule update --init --recursive`
+后，才能安装 `source/frog_rl` 并使用自定义训练算法和 runner。
+`frog_lab` 则提供 Isaac Lab 任务与配置。
 
 `frog_rl` 使用与 RSL-RL 一致的嵌套包结构：
 
@@ -140,7 +146,7 @@ python scripts/frog_rl/play.py \
 ### 部署参数导出（deploy.yaml）
 
 训练启动时，`scripts/frog_rl/train.py` 会自动调用
-`frog_lab/utils/export_deploy_cfg.py`，在本次 run 的 `params/deploy.yaml`
+`scripts/frog_rl/utils/export_deploy_cfg.py`，在本次 run 的 `params/deploy.yaml`
 中导出真机部署所需的全部环境侧参数，与 `policy.onnx` 配套构成完整部署包：
 
 - `joint_ids_map`：实际使用的关节名列表（即策略动作序，无 SDK 重映射）
