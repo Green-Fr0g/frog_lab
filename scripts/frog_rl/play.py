@@ -20,6 +20,7 @@ parser.add_argument("--video_length", type=int, default=200)
 parser.add_argument("--num_envs", type=int, default=None)
 parser.add_argument("--task", type=str, default=None)
 parser.add_argument("--agent", type=str, default="frog_rl_cfg_entry_point")
+parser.add_argument("--seed", type=int, default=None)
 parser.add_argument("--real-time", action="store_true", default=False)
 control_group = parser.add_mutually_exclusive_group()
 control_group.add_argument("--keyboard", action="store_true", help="Use the keyboard to control velocity commands.")
@@ -42,7 +43,7 @@ from isaaclab.devices import Se2Gamepad, Se2GamepadCfg, Se2Keyboard, Se2Keyboard
 from isaaclab.envs import DirectMARLEnv, DirectMARLEnvCfg, DirectRLEnvCfg, ManagerBasedRLEnvCfg, multi_agent_to_single_agent
 from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.utils.assets import retrieve_file_path
-from isaaclab_rl.rsl_rl import RslRlBaseRunnerCfg, RslRlVecEnvWrapper
+from isaaclab_rl.rsl_rl import RslRlBaseRunnerCfg, RslRlVecEnvWrapper, export_policy_as_jit, export_policy_as_onnx
 from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 
@@ -105,9 +106,19 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     runner = runner_type(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
     runner.load(resume_path)
     policy = runner.get_inference_policy(device=env.unwrapped.device)
+    policy_nn = runner.alg.policy
+
+    # extract the normalizer
+    if hasattr(policy_nn, "actor_obs_normalizer"):
+        normalizer = policy_nn.actor_obs_normalizer
+    elif hasattr(policy_nn, "student_obs_normalizer"):
+        normalizer = policy_nn.student_obs_normalizer
+    else:
+        normalizer = None
+
     export_dir = os.path.join(os.path.dirname(resume_path), "exported")
-    runner.export_policy_to_jit(export_dir, "policy.pt")
-    runner.export_policy_to_onnx(export_dir, "policy.onnx")
+    export_policy_as_jit(policy_nn, normalizer=normalizer, path=export_dir, filename="policy.pt")
+    export_policy_as_onnx(policy_nn, normalizer=normalizer, path=export_dir, filename="policy.onnx")
 
     obs = env.get_observations()
     dt = env.unwrapped.step_dt
@@ -117,7 +128,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         with torch.inference_mode():
             actions = policy(obs)
             obs, _, dones, _ = env.step(actions)
-            policy.reset(dones)
+            policy_nn.reset(dones)
         if camera_follower is not None:
             if torch.any(dones).item():
                 camera_follower.reset()
