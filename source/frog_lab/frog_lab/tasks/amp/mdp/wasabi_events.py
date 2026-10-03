@@ -29,18 +29,26 @@ def init_wasabi_motion_reference(
 ) -> None:
     del env_ids
     asset = env.scene["robot"]
-    actual_body_names = tuple(getattr(asset.data, "body_names", ()))
-    if actual_body_names and set(actual_body_names) != set(all_body_names):
-        raise ValueError(
-            "WASABI robot/motion body names mismatch. "
-            f"Robot={actual_body_names}, motion={tuple(all_body_names)}"
-        )
-    actual_joint_names = tuple(getattr(asset.data, "joint_names", ()))
-    if actual_joint_names and set(actual_joint_names) != set(joint_names):
-        raise ValueError(
-            "WASABI robot/motion joint names mismatch. "
-            f"Robot={actual_joint_names}, motion={tuple(joint_names)}"
-        )
+    actual_body_names = tuple(asset.body_names)
+    if actual_body_names:
+        missing_body_names = sorted(set(all_body_names) - set(actual_body_names))
+        if missing_body_names:
+            raise ValueError(
+                "WASABI motion body names were not found in the robot model. "
+                f"Missing={missing_body_names}, "
+                f"Robot={actual_body_names}, "
+                f"Configured={tuple(all_body_names)}"
+            )
+    actual_joint_names = tuple(asset.joint_names)
+    if actual_joint_names:
+        missing_joint_names = sorted(set(joint_names) - set(actual_joint_names))
+        if missing_joint_names:
+            raise ValueError(
+                "WASABI motion joint names were not found in the robot model. "
+                f"Missing={missing_joint_names}, "
+                f"Robot={actual_joint_names}, "
+                f"Configured={tuple(joint_names)}"
+            )
     WasabiMotionReference.initialize_for_env(
         env,
         motion_files=motion_files,

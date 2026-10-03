@@ -159,7 +159,7 @@ class MotionResetManager:
             frame_ids[selected] = torch.randint(clips[clip_id].num_frames, (int(selected.sum().item()),), device=env.device)
 
         asset: Articulation = env.scene[asset_cfg.name]
-        asset_joint_names = tuple(getattr(asset.data, "joint_names", ()))
+        asset_joint_names = tuple(asset.joint_names)
         if not asset_joint_names:
             raise RuntimeError("AMP asset does not expose joint_names for motion alignment.")
 

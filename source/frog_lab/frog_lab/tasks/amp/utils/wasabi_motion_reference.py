@@ -90,6 +90,11 @@ class WasabiMotionReference:
             raise RuntimeError("WASABI motion reference has not been initialized for this environment.") from exc
 
     @classmethod
+    def is_initialized(cls, env) -> bool:
+        """Return whether a motion reference has been registered for ``env``."""
+        return id(env) in cls._instances
+
+    @classmethod
     def initialize_for_env(
         cls,
         env,
@@ -248,7 +253,8 @@ class WasabiMotionReference:
         for clip_id, clip in enumerate(self._clips):
             selected = self.motion_indices == clip_id
             if selected.any():
-                result[selected] = clip[self.frame_indices[selected]]
+                tensor = getattr(clip, attr)
+                result[selected] = tensor[self.frame_indices[selected]]
         return result
 
     @property

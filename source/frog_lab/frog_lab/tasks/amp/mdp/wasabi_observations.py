@@ -26,15 +26,41 @@ def _reference(env: ManagerBasedRLEnv) -> WasabiMotionReference:
 
 
 def _joint_ids(asset_cfg: SceneEntityCfg, count: int, device: torch.device) -> torch.Tensor:
-    if getattr(asset_cfg, "joint_ids", None) is None or len(asset_cfg.joint_ids) == 0:
+    joint_ids = asset_cfg.joint_ids
+    if joint_ids is None:
         return torch.arange(count, device=device)
-    return torch.as_tensor(asset_cfg.joint_ids, device=device, dtype=torch.long)
+    if isinstance(joint_ids, slice):
+        return torch.arange(count, device=device)[joint_ids]
+    if len(joint_ids) == 0:
+        return torch.arange(count, device=device)
+    return torch.as_tensor(joint_ids, device=device, dtype=torch.long)
+
+
+def _zero_reference_vector(env: ManagerBasedRLEnv) -> torch.Tensor:
+    return torch.zeros((env.num_envs, 3), device=env.device, dtype=torch.float32)
+
+
+def _zero_reference_joint_state(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg,
+    robot_cfg: SceneEntityCfg,
+) -> torch.Tensor:
+    robot = env.scene[robot_cfg.name]
+    default_joint_pos = robot.data.default_joint_pos
+    ids = _joint_ids(asset_cfg, default_joint_pos.shape[-1], default_joint_pos.device)
+    return torch.zeros(
+        (env.num_envs, ids.numel()),
+        device=default_joint_pos.device,
+        dtype=default_joint_pos.dtype,
+    )
 
 
 def projected_gravity_reference_as_state(
     env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("motion_reference")
 ) -> torch.Tensor:
     del asset_cfg
+    if not WasabiMotionReference.is_initialized(env):
+        return _zero_reference_vector(env)
     return _reference(env).projected_gravity_b()
 
 
@@ -43,6 +69,8 @@ def joint_pos_rel_reference_as_state(
     asset_cfg: SceneEntityCfg = SceneEntityCfg("motion_reference"),
     robot_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
 ) -> torch.Tensor:
+    if not WasabiMotionReference.is_initialized(env):
+        return _zero_reference_joint_state(env, asset_cfg, robot_cfg)
     reference = _reference(env)
     robot = env.scene[robot_cfg.name]
     ids = _joint_ids(asset_cfg, reference.joint_pos.shape[-1], reference.device)
@@ -54,6 +82,8 @@ def joint_vel_rel_reference_as_state(
     asset_cfg: SceneEntityCfg = SceneEntityCfg("motion_reference"),
     robot_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
 ) -> torch.Tensor:
+    if not WasabiMotionReference.is_initialized(env):
+        return _zero_reference_joint_state(env, asset_cfg, robot_cfg)
     reference = _reference(env)
     robot = env.scene[robot_cfg.name]
     ids = _joint_ids(asset_cfg, reference.joint_vel.shape[-1], reference.device)
@@ -64,6 +94,8 @@ def base_lin_vel_reference_as_state(
     env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("motion_reference")
 ) -> torch.Tensor:
     del asset_cfg
+    if not WasabiMotionReference.is_initialized(env):
+        return _zero_reference_vector(env)
     return _reference(env).base_lin_vel_b()
 
 
@@ -71,6 +103,8 @@ def base_ang_vel_reference_as_state(
     env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("motion_reference")
 ) -> torch.Tensor:
     del asset_cfg
+    if not WasabiMotionReference.is_initialized(env):
+        return _zero_reference_vector(env)
     return _reference(env).base_ang_vel_b()
 
 
