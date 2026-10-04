@@ -73,8 +73,8 @@ def joint_pos_rel_reference_as_state(
         return _zero_reference_joint_state(env, asset_cfg, robot_cfg)
     reference = _reference(env)
     robot = env.scene[robot_cfg.name]
-    ids = _joint_ids(asset_cfg, reference.joint_pos.shape[-1], reference.device)
-    return reference.joint_pos[:, ids] - robot.data.default_joint_pos[:, ids]
+    reference_ids, asset_ids = reference.resolve_joint_mapping(robot, asset_cfg)
+    return reference.joint_pos[:, reference_ids] - robot.data.default_joint_pos[:, asset_ids]
 
 
 def joint_vel_rel_reference_as_state(
@@ -86,8 +86,8 @@ def joint_vel_rel_reference_as_state(
         return _zero_reference_joint_state(env, asset_cfg, robot_cfg)
     reference = _reference(env)
     robot = env.scene[robot_cfg.name]
-    ids = _joint_ids(asset_cfg, reference.joint_vel.shape[-1], reference.device)
-    return reference.joint_vel[:, ids] - robot.data.default_joint_vel[:, ids]
+    reference_ids, asset_ids = reference.resolve_joint_mapping(robot, asset_cfg)
+    return reference.joint_vel[:, reference_ids] - robot.data.default_joint_vel[:, asset_ids]
 
 
 def base_lin_vel_reference_as_state(

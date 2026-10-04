@@ -281,6 +281,37 @@ class WasabiMotionReference:
     def joint_vel(self) -> torch.Tensor:
         return self._gather("joint_vel")
 
+    def resolve_joint_mapping(self, asset, asset_cfg) -> tuple[list[int], list[int]]:
+        """Resolve reference and asset joint indices by joint name.
+
+        The motion arrays use ``self.joint_names`` while IsaacLab assets use
+        their own URDF order.  ``asset_cfg.joint_ids`` is therefore only used
+        to select the asset joints; its positions must not index the motion.
+        """
+        asset_joint_names = tuple(asset.data.joint_names)
+        joint_ids = asset_cfg.joint_ids
+        if isinstance(joint_ids, slice):
+            asset_ids = list(range(len(asset_joint_names)))[joint_ids]
+        else:
+            asset_ids = [int(index) for index in joint_ids]
+
+        reference_lookup = {name: index for index, name in enumerate(self.joint_names)}
+        reference_ids = []
+        missing = []
+        for asset_id in asset_ids:
+            name = asset_joint_names[asset_id]
+            reference_id = reference_lookup.get(name)
+            if reference_id is None:
+                missing.append(name)
+            else:
+                reference_ids.append(reference_id)
+        if missing:
+            raise ValueError(
+                f"WASABI reference is missing robot joints {missing}. "
+                f"Reference joints: {list(self.joint_names)}"
+            )
+        return reference_ids, asset_ids
+
     def base_state(self) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         return (
             self.body_pos_w[:, self._root_index],
@@ -312,14 +343,15 @@ class WasabiMotionReference:
         root_pos = pos[env_ids].clone() + env.scene.env_origins[env_ids]
         root_pose = torch.cat((root_pos, quat[env_ids]), dim=-1)
         root_velocity = torch.cat((lin_vel[env_ids], ang_vel[env_ids]), dim=-1)
-        joint_pos = self.joint_pos[env_ids][:, asset_cfg.joint_ids]
-        joint_vel = self.joint_vel[env_ids][:, asset_cfg.joint_ids]
-        limits = asset.data.soft_joint_pos_limits[env_ids][:, asset_cfg.joint_ids]
+        reference_ids, asset_ids = self.resolve_joint_mapping(asset, asset_cfg)
+        joint_pos = self.joint_pos[env_ids][:, reference_ids]
+        joint_vel = self.joint_vel[env_ids][:, reference_ids]
+        limits = asset.data.soft_joint_pos_limits[env_ids][:, asset_ids]
         asset.write_root_pose_to_sim(root_pose, env_ids=env_ids)
         asset.write_root_velocity_to_sim(root_velocity, env_ids=env_ids)
         asset.write_joint_state_to_sim(
             joint_pos.clamp(limits[..., 0], limits[..., 1]),
             joint_vel,
-            joint_ids=asset_cfg.joint_ids,
+            joint_ids=asset_ids,
             env_ids=env_ids,
         )
