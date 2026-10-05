@@ -277,8 +277,8 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "static_friction_range": (0.3, 1.0),
-            "dynamic_friction_range": (0.3, 0.8),
+            "static_friction_range": (0.7, 1.0),
+            "dynamic_friction_range": (0.8, 1.2),
             "restitution_range": (0.0, 0.5),
             "num_buckets": 64,
         },
@@ -288,7 +288,7 @@ class EventCfg:
         mode="startup",
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names=".*"),
-            "com_range": {"x": (-0.05, 0.05), "y": (-0.05, 0.05), "z": (-0.05, 0.05)},
+            "com_range": {"x": (-0.02, 0.02), "y": (-0.02, 0.02), "z": (-0.02, 0.02)},
         },
     )
 
@@ -297,8 +297,8 @@ class EventCfg:
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg("robot", joint_names=".*"),
-            "stiffness_distribution_params": (0.5, 2.0),
-            "damping_distribution_params": (0.5, 2.0),
+            "stiffness_distribution_params": (0.8, 1.2),
+            "damping_distribution_params": (0.8, 1.2),
             "operation": "scale",
             "distribution": "uniform",
         },
@@ -310,9 +310,9 @@ class EventCfg:
         interval_range_s=(1.0, 3.0),
         params={
             "velocity_range": {
-                "x": (-1.0, 1.0),
+                "x": (-0.5, 0.5),
                 "y": (-0.5, 0.5),
-                "z": (-0.4, 0.4),
+                "z": (-0.2, 0.2),
                 "roll": (-0.52, 0.52),
                 "pitch": (-0.52, 0.52),
                 "yaw": (-0.78, 0.78),
@@ -330,15 +330,23 @@ class RewardsCfg:
         weight=-200.0
     )
 
-    track_lin_vel_xy_exp = RewTerm(
-        func=mdp.track_lin_vel_xy_yaw_frame_exp,
+    track_anchor_linear_velocity = RewTerm(
+        func=mdp.track_anchor_linear_velocity,
         weight=0.0,
-        params={"command_name": "base_velocity", "std": math.sqrt(0.25)},
+        params={
+            "command_name": "base_velocity",
+            "std": 1.0,
+            "anchor_cfg": SceneEntityCfg("robot", body_names=""),
+        },
     )
-    track_ang_vel_z_exp = RewTerm(
-        func=mdp.track_ang_vel_z_world_exp,
+    track_anchor_angular_velocity = RewTerm(
+        func=mdp.track_anchor_angular_velocity,
         weight=0.0,
-        params={"command_name": "base_velocity", "std": math.sqrt(0.25)},
+        params={
+            "command_name": "base_velocity",
+            "std": 3.14,
+            "anchor_cfg": SceneEntityCfg("robot", body_names=""),
+        },
     )
 
     ang_vel_xy_l2 = RewTerm(
@@ -382,6 +390,12 @@ class RewardsCfg:
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=""),
             "threshold": 1.0,
         },
+    )
+
+    body_ang_vel_xy_l2 = RewTerm(
+        func=mdp.body_ang_vel_xy_l2,
+        weight=0.0,
+        params={"body_cfg": SceneEntityCfg("robot", body_names="")},
     )
 
 

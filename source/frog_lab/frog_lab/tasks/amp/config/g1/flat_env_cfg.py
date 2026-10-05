@@ -142,8 +142,12 @@ class G1AmpFlatEnvCfg(AmpFlatEnvCfg):
         self.observations.amp_state.body_ang_vel_b.params["body_cfg"].body_names = self.amp_body_names
 
         self.rewards.is_terminated.weight = -200.0
-        self.rewards.track_lin_vel_xy_exp.weight = 1.0
-        self.rewards.track_ang_vel_z_exp.weight = 1.0
+        self.rewards.track_anchor_linear_velocity.weight = 1.0
+        self.rewards.track_anchor_linear_velocity.params["anchor_cfg"].body_names = self.anchor_body_name
+        self.rewards.track_anchor_angular_velocity.weight = 1.0
+        self.rewards.track_anchor_angular_velocity.params["anchor_cfg"].body_names = self.anchor_body_name
+        self.rewards.body_ang_vel_xy_l2.weight = -0.5
+        self.rewards.body_ang_vel_xy_l2.params["body_cfg"].body_names = "pelvis"
         self.rewards.ang_vel_xy_l2.weight = -0.1
         self.rewards.base_height_l2.weight = -5.0
         self.rewards.joint_pos_limits.weight = -0.5

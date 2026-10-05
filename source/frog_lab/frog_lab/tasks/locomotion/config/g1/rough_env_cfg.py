@@ -14,37 +14,37 @@ class G1RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
     base_link_name = "torso_link"
     foot_link_name = ".*_ankle_roll_link"
 
-    # joint_names = [  # 29-DOF controllable joints, index: name
-    #     "left_hip_pitch_joint",       # 0  L_LEG_HIP_PITCH
-    #     "left_hip_roll_joint",        # 1  L_LEG_HIP_ROLL
-    #     "left_hip_yaw_joint",         # 2  L_LEG_HIP_YAW
-    #     "left_knee_joint",            # 3  L_LEG_KNEE
-    #     "left_ankle_pitch_joint",     # 4  L_LEG_ANKLE_PITCH
-    #     "left_ankle_roll_joint",      # 5  L_LEG_ANKLE_ROLL
-    #     "right_hip_pitch_joint",      # 6  R_LEG_HIP_PITCH
-    #     "right_hip_roll_joint",       # 7  R_LEG_HIP_ROLL
-    #     "right_hip_yaw_joint",        # 8  R_LEG_HIP_YAW
-    #     "right_knee_joint",           # 9  R_LEG_KNEE
-    #     "right_ankle_pitch_joint",    # 10 R_LEG_ANKLE_PITCH
-    #     "right_ankle_roll_joint",     # 11 R_LEG_ANKLE_ROLL
-    #     "waist_yaw_joint",            # 12 WAIST_YAW
-    #     "waist_roll_joint",           # 13 WAIST_ROLL
-    #     "waist_pitch_joint",          # 14 WAIST_PITCH
-    #     "left_shoulder_pitch_joint",  # 15 L_SHOULDER_PITCH
-    #     "left_shoulder_roll_joint",   # 16 L_SHOULDER_ROLL
-    #     "left_shoulder_yaw_joint",    # 17 L_SHOULDER_YAW
-    #     "left_elbow_joint",           # 18 L_ELBOW
-    #     "left_wrist_roll_joint",      # 19 L_WRIST_ROLL
-    #     "left_wrist_pitch_joint",     # 20 L_WRIST_PITCH
-    #     "left_wrist_yaw_joint",       # 21 L_WRIST_YAW
-    #     "right_shoulder_pitch_joint", # 22 R_SHOULDER_PITCH
-    #     "right_shoulder_roll_joint",  # 23 R_SHOULDER_ROLL
-    #     "right_shoulder_yaw_joint",   # 24 R_SHOULDER_YAW
-    #     "right_elbow_joint",          # 25 R_ELBOW
-    #     "right_wrist_roll_joint",     # 26 R_WRIST_ROLL
-    #     "right_wrist_pitch_joint",    # 27 R_WRIST_PITCH
-    #     "right_wrist_yaw_joint",      # 28 R_WRIST_YAW
-    # ]
+    joint_names = [  # 29-DOF controllable joints, index: name
+        "left_hip_pitch_joint",       # 0  L_LEG_HIP_PITCH
+        "left_hip_roll_joint",        # 1  L_LEG_HIP_ROLL
+        "left_hip_yaw_joint",         # 2  L_LEG_HIP_YAW
+        "left_knee_joint",            # 3  L_LEG_KNEE
+        "left_ankle_pitch_joint",     # 4  L_LEG_ANKLE_PITCH
+        "left_ankle_roll_joint",      # 5  L_LEG_ANKLE_ROLL
+        "right_hip_pitch_joint",      # 6  R_LEG_HIP_PITCH
+        "right_hip_roll_joint",       # 7  R_LEG_HIP_ROLL
+        "right_hip_yaw_joint",        # 8  R_LEG_HIP_YAW
+        "right_knee_joint",           # 9  R_LEG_KNEE
+        "right_ankle_pitch_joint",    # 10 R_LEG_ANKLE_PITCH
+        "right_ankle_roll_joint",     # 11 R_LEG_ANKLE_ROLL
+        "waist_yaw_joint",            # 12 WAIST_YAW
+        "waist_roll_joint",           # 13 WAIST_ROLL
+        "waist_pitch_joint",          # 14 WAIST_PITCH
+        "left_shoulder_pitch_joint",  # 15 L_SHOULDER_PITCH
+        "left_shoulder_roll_joint",   # 16 L_SHOULDER_ROLL
+        "left_shoulder_yaw_joint",    # 17 L_SHOULDER_YAW
+        "left_elbow_joint",           # 18 L_ELBOW
+        "left_wrist_roll_joint",      # 19 L_WRIST_ROLL
+        "left_wrist_pitch_joint",     # 20 L_WRIST_PITCH
+        "left_wrist_yaw_joint",       # 21 L_WRIST_YAW
+        "right_shoulder_pitch_joint", # 22 R_SHOULDER_PITCH
+        "right_shoulder_roll_joint",  # 23 R_SHOULDER_ROLL
+        "right_shoulder_yaw_joint",   # 24 R_SHOULDER_YAW
+        "right_elbow_joint",          # 25 R_ELBOW
+        "right_wrist_roll_joint",     # 26 R_WRIST_ROLL
+        "right_wrist_pitch_joint",    # 27 R_WRIST_PITCH
+        "right_wrist_yaw_joint",      # 28 R_WRIST_YAW
+    ]
 
     def __post_init__(self):
         super().__post_init__()
@@ -120,15 +120,17 @@ class G1RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.rewards.feet_clearance.weight = 1.0
         self.rewards.feet_clearance.params["target_height"] = 0.05
         self.rewards.feet_clearance.params["asset_cfg"].body_names = [self.foot_link_name]
-        self.rewards.feet_air_time.weight = 0.25
+        self.rewards.feet_air_time.weight = 0.0
         self.rewards.feet_air_time.params["threshold"] = 0.4
         self.rewards.feet_air_time.params["sensor_cfg"].body_names = [self.foot_link_name]
+        self.rewards.gait.weight = 1.0
+        self.rewards.gait.params["sensor_cfg"].body_names = [self.foot_link_name]
         self.rewards.feet_stumble.weight = 0.0
         self.rewards.feet_stumble.params["sensor_cfg"].body_names = [self.foot_link_name]
         self.rewards.feet_slide.weight = -0.2
         self.rewards.feet_slide.params["sensor_cfg"].body_names = [self.foot_link_name]
         self.rewards.feet_slide.params["asset_cfg"].body_names = [self.foot_link_name]
-        self.rewards.upward.weight = 1.0
+        self.rewards.upward.weight = 0.4
 
         #other_Rewards
         self.rewards.undesired_contacts.weight = -1.0
@@ -137,8 +139,8 @@ class G1RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.rewards.contact_forces.params["sensor_cfg"].body_names = [self.foot_link_name]
 
         #tasks_Rewards
-        self.rewards.track_lin_vel_xy_exp.weight = 3.0
-        self.rewards.track_ang_vel_z_exp.weight = 3.0
+        self.rewards.track_lin_vel_xy_exp.weight = 1.0
+        self.rewards.track_ang_vel_z_exp.weight = 1.0
 
         if self.__class__.__name__ == "G1RoughEnvCfg":
             self.disable_zero_weight_rewards()

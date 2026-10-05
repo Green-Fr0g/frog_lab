@@ -17,7 +17,7 @@ class G1WasabiFlatEnvCfg(WasabiFlatEnvCfg):
     root_link_name = "pelvis"
     foot_link_name = ".*_ankle_roll_link"
     anchor_body_name = "torso_link"
-    motion_dir = os.path.join(AMP_DIR, "config", "g1", "motions")
+    motion_dir = os.path.join(AMP_DIR, "config", "g1", "motions" , "WalkandRun")
 
     joint_names = [
         "left_hip_pitch_joint", "left_hip_roll_joint", "left_hip_yaw_joint", "left_knee_joint",
@@ -83,8 +83,12 @@ class G1WasabiFlatEnvCfg(WasabiFlatEnvCfg):
         self.terminations.illegal_contact.params["sensor_cfg"].body_names = [self.base_link_name]
 
         self.rewards.is_terminated.weight = -200.0
-        self.rewards.track_lin_vel_xy_exp.weight = 1.0
-        self.rewards.track_ang_vel_z_exp.weight = 1.0
+        self.rewards.track_anchor_linear_velocity.weight = 1.0
+        self.rewards.track_anchor_linear_velocity.params["anchor_cfg"].body_names = self.anchor_body_name
+        self.rewards.track_anchor_angular_velocity.weight = 1.0
+        self.rewards.track_anchor_angular_velocity.params["anchor_cfg"].body_names = self.anchor_body_name
+        self.rewards.body_ang_vel_xy_l2.weight = -0.5
+        self.rewards.body_ang_vel_xy_l2.params["body_cfg"].body_names = "pelvis"
         self.rewards.ang_vel_xy_l2.weight = -0.1
         self.rewards.base_height_l2.weight = -5.0
         self.rewards.joint_pos_limits.weight = -0.5

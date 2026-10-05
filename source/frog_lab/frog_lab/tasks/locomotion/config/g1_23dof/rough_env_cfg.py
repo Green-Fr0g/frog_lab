@@ -73,7 +73,7 @@ class G1_23DOFRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.rewards.lin_vel_z_l2.weight = 0.0
         self.rewards.ang_vel_xy_l2.weight = -0.1
         self.rewards.flat_orientation_l2.weight = -1.0
-        self.rewards.base_height_l2.weight = -10.0
+        self.rewards.base_height_l2.weight = -8.0
         self.rewards.base_height_l2.params["target_height"] = 0.78
         self.rewards.base_height_l2.params["asset_cfg"].body_names = [self.base_link_name]
         self.rewards.body_lin_acc_l2.weight = 0.0
@@ -100,7 +100,7 @@ class G1_23DOFRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
             ".*_elbow_joint",
             ".*_wrist_roll_joint",
         ]
-        self.rewards.joint_deviation_hip.weight = -0.1
+        self.rewards.joint_deviation_hip.weight = -1.0
         self.rewards.joint_deviation_hip.params["asset_cfg"].joint_names = [".*_hip_yaw.*", ".*_hip_roll.*"]
         self.rewards.joint_deviation_torso.weight = -0.1
         self.rewards.joint_deviation_torso.params["asset_cfg"].joint_names = ["waist_yaw_joint"]
@@ -112,9 +112,11 @@ class G1_23DOFRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.rewards.feet_clearance.weight = 1.0
         self.rewards.feet_clearance.params["target_height"] = 0.08
         self.rewards.feet_clearance.params["asset_cfg"].body_names = [self.foot_link_name]
-        self.rewards.feet_air_time.weight = 0.25
+        self.rewards.feet_air_time.weight = 0.0
         self.rewards.feet_air_time.params["threshold"] = 0.4
         self.rewards.feet_air_time.params["sensor_cfg"].body_names = [self.foot_link_name]
+        self.rewards.gait.weight = 1.0
+        self.rewards.gait.params["sensor_cfg"].body_names = [self.foot_link_name]
         self.rewards.feet_stumble.weight = 0.0
         self.rewards.feet_stumble.params["sensor_cfg"].body_names = [self.foot_link_name]
         self.rewards.feet_slide.weight = -0.2
@@ -129,8 +131,8 @@ class G1_23DOFRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.rewards.contact_forces.params["sensor_cfg"].body_names = [self.foot_link_name]
 
         #tasks_Rewards
-        self.rewards.track_lin_vel_xy_exp.weight = 3.0
-        self.rewards.track_ang_vel_z_exp.weight = 3.0
+        self.rewards.track_lin_vel_xy_exp.weight = 1.0
+        self.rewards.track_ang_vel_z_exp.weight = 1.0
 
         if self.__class__.__name__ == "G1_23DOFRoughEnvCfg":
             self.disable_zero_weight_rewards()
