@@ -142,8 +142,6 @@ class G1_23DOFRoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.terminations.base_height.params["minimum_height"] = 0.2
 
         # Curriculum
-        self.curriculum.command_levels_lin_vel.params["range_multiplier"] = (0.1, 1.0)
-        self.curriculum.command_levels_ang_vel.params["range_multiplier"] = (0.1, 1.0)
 
         # Commands
         self.commands.base_velocity.ranges.lin_vel_x = (-1.0, 1.0)

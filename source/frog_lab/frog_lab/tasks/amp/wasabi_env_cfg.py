@@ -61,7 +61,7 @@ class CommandsCfg:
         resampling_time_range=(3.0, 8.0),
         rel_standing_envs=0.05,
         rel_heading_envs=0.25,
-        heading_command=True,
+        heading_command=False,
         heading_control_stiffness=0.5,
         debug_vis=True,
         ranges=mdp.UniformVelocityCommandCfg.Ranges(

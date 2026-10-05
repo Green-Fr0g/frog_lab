@@ -133,8 +133,8 @@ class CommandsCfg:
         asset_name="robot",
         resampling_time_range=(10.0, 10.0),
         rel_standing_envs=0.0,
-        rel_heading_envs=1.0,
-        heading_command=True,
+        rel_heading_envs=0.0,
+        heading_command=False,
         heading_control_stiffness=0.3,
         debug_vis=True,
         ranges=mdp.UniformVelocityCommandCfg.Ranges(
@@ -616,21 +616,6 @@ class CurriculumCfg:
         func=mdp.terrain_levels_vel
     )
 
-    command_levels_lin_vel = CurrTerm(
-        func=mdp.command_levels_lin_vel,
-        params={
-            "reward_term_name": "track_lin_vel_xy_exp",
-            "range_multiplier": (0.1, 1.0),
-        },
-    )
-
-    command_levels_ang_vel = CurrTerm(
-        func=mdp.command_levels_ang_vel,
-        params={
-            "reward_term_name": "track_ang_vel_z_exp",
-            "range_multiplier": (0.1, 1.0),
-        },
-    )
 
 ##
 # Environment configuration

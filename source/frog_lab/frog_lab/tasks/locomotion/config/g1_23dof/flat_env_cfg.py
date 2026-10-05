@@ -32,7 +32,7 @@ class G1_23DOFFlatEnvCfg(G1_23DOFRoughEnvCfg):
         self.rewards.joint_torques_l2.params["asset_cfg"].joint_names = [".*_hip_.*", ".*_knee_joint"]
 
         #task_Rewards
-        self.rewards.track_ang_vel_z_exp.weight = 1.0
+        self.rewards.track_ang_vel_z_exp.weight = 0.5
 
         if self.__class__.__name__ == "G1_23DOFFlatEnvCfg":
             self.disable_zero_weight_rewards()
